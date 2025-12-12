@@ -1,0 +1,63 @@
+const { z } = require('zod');
+
+// Enums (matching manual DB strings)
+// Enums (matching manual DB strings)
+const RoleEnum = ['OWNER', 'ADMIN', 'SUBSCRIBER', 'MEMBER']; // Added SUBSCRIBER
+const StatusEnum = ['Scheduled', 'Confirmed', 'Cancelled', 'Completed', 'Pending'];
+const PlanEnum = ['Basic', 'Intermediate', 'Advanced'];
+
+// Auth Schemas
+const registerSchema = z.object({
+    email: z.string().email(),
+    password: z.string().min(8, 'Password must be at least 8 characters'),
+    name: z.string().min(2),
+    companyName: z.string().min(2),
+    location: z.string().optional(),
+    timezone: z.string().optional(),
+});
+
+const loginSchema = z.object({
+    email: z.string().email(),
+    password: z.string(),
+});
+
+const createUserSchema = z.object({
+    email: z.string().email(),
+    password: z.string().min(8),
+    name: z.string().min(2),
+    role: z.enum(RoleEnum)
+});
+
+// Booking Schemas
+const createBookingSchema = z.object({
+    clientId: z.string().uuid(),
+    date: z.string().datetime(), // ISO 8601
+    purpose: z.string().optional(),
+    status: z.enum(StatusEnum).optional().default('Scheduled'),
+});
+
+const updateBookingSchema = z.object({
+    date: z.string().datetime().optional(),
+    status: z.enum(StatusEnum).optional(),
+    purpose: z.string().optional(),
+});
+
+// Client Schemas
+const createClientSchema = z.object({
+    name: z.string().min(2),
+    email: z.string().email().optional().or(z.literal('')),
+    phone: z.string().optional(),
+    notes: z.string().optional(),
+});
+
+module.exports = {
+    registerSchema,
+    loginSchema,
+    createUserSchema,
+    createBookingSchema,
+    updateBookingSchema,
+    createClientSchema,
+    RoleEnum,
+    StatusEnum,
+    PlanEnum
+};

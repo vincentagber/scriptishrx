@@ -1,0 +1,196 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Tenant {
+  id               String  @id @default(uuid())
+  name             String
+  location         String?
+  timezone         String?
+  phoneNumber      String? @unique
+
+  // Customization & Subscription
+  plan             String  @default("Basic")
+  brandColor       String  @default("#000000")
+  logoUrl          String?
+  aiName           String  @default("ScriptishRx AI")
+  aiWelcomeMessage String?
+  customSystemPrompt String?
+  integrations     String?
+
+  // THIS IS THE ONLY LINE ADDED — REQUIRED FOR VOICECAKE
+  voiceCakeAgentId String?
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  users            User[]
+  clients          Client[]
+  bookings         Booking[]
+  minutes          MeetingMinute[]
+  messages         Message[]
+  workflows        Workflow[]
+  campaigns        Campaign[]
+
+  @@index([name])
+}
+
+model User {
+  id           String  @id @default(uuid())
+  email        String  @unique
+  password     String
+  name         String?
+  role         String  @default("MEMBER")
+  tenantId     String
+  tenant       Tenant  @relation(fields: [tenantId], references: [id])
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  subscription Subscription?
+  avatarUrl    String?
+  phoneNumber  String?
+  notifications Notification[]
+
+  @@index([tenantId])
+  @@index([email])
+  @@index([role])
+}
+
+model Client {
+  id        String  @id @default(uuid())
+  name      String
+  phone     String?
+  email     String?
+  notes     String?
+  source    String  @default("Direct")
+  tenantId  String
+  tenant    Tenant  @relation(fields: [tenantId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  bookings  Booking[]
+  minutes   MeetingMinute[]
+
+  @@index([tenantId])
+  @@index([phone])
+  @@index([email])
+}
+
+model Booking {
+  id        String   @id @default(uuid())
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  date      DateTime
+  status    String   @default("Scheduled")
+  purpose   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([clientId])
+  @@index([date])
+  @@index([status])
+}
+
+model MeetingMinute {
+  id        String   @id @default(uuid())
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([clientId])
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  sessionId String
+  role      String
+  content   String
+  tenantId  String?
+  tenant    Tenant?  @relation(fields: [tenantId], references: [id])
+  userId    String?
+  createdAt DateTime @default(now())
+
+  @@index([sessionId])
+  @@index([tenantId])
+}
+
+model Subscription {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id])
+  plan      String
+  status    String
+  stripeId  String?
+  paypalId  String?
+  startDate DateTime @default(now())
+  endDate   DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Workflow {
+  id        String   @id @default(uuid())
+  name      String
+  trigger   String
+  actions   String
+  isActive  Boolean  @default(true)
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  type      String
+  link      String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  tenantId   String
+  userId     String?
+  action     String
+  details    String?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  @@index([tenantId])
+}
+
+model Campaign {
+  id         String   @id @default(uuid())
+  name       String
+  type       String
+  status     String
+  sentCount  Int      @default(0)
+  openCount  Int      @default(0)
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([tenantId])
+}
