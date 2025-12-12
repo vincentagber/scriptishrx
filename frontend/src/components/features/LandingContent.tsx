@@ -523,9 +523,8 @@ export const Footer = () => (
         <div className="container mx-auto px-4">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-12 mb-12 md:mb-16">
                 <div className="col-span-2 lg:col-span-1 space-y-6">
-                    <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-lg bg-primary-start flex items-center justify-center font-bold text-white">S</div>
-                        <span className="text-xl font-bold">ScriptishRx</span>
+                    <div className="flex items-center gap-2 mb-4">
+                        <img src="/logo.jpg" alt="ScriptishRx Logo" className="h-16 w-auto object-contain brightness-0 invert" />
                     </div>
                     <p className="text-slate-400 leading-relaxed max-w-sm">
                         The #1 AI-powered business concierge platform for modern enterprises.

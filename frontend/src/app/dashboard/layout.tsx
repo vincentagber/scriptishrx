@@ -130,10 +130,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 {/* Brand */}
                 <div className="h-20 flex items-center px-6">
                     <div className="flex items-center gap-3 text-white">
-                        <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center backdrop-blur-sm">
-                            <span className="font-bold text-lg">S</span>
-                        </div>
-                        <span className="font-bold text-xl tracking-tight">ScriptishRx</span>
+                        <img src="/logo.jpg" alt="ScriptishRx" className="h-14 w-auto rounded-lg" />
                     </div>
 
                     <button

@@ -29,10 +29,7 @@ export default function Home() {
       <nav className="fixed top-0 w-full z-50 px-4 md:px-6 py-4 transition-all duration-300 backdrop-blur-md bg-white/80 border-b border-slate-100">
         <div className="container mx-auto flex justify-between items-center">
           <div className="flex items-center gap-2 relative z-50">
-            <div className="w-8 h-8 rounded-lg bg-primary-start flex items-center justify-center text-white font-bold text-xl">S</div>
-            <div className="text-xl md:text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary-start to-primary-end cursor-pointer">
-              ScriptishRx
-            </div>
+            <img src="/logo.jpg" alt="ScriptishRx Logo" className="h-16 w-auto object-contain" />
           </div>
 
           {/* Desktop Nav */}

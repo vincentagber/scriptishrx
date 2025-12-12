@@ -48,9 +48,9 @@ export default function RegisterPage() {
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
             <div className="bg-white/80 backdrop-blur-xl p-8 rounded-2xl shadow-2xl w-full max-w-md border border-white/50">
                 <div className="text-center mb-8">
-                    <h1 className="text-4xl font-extrabold text-blue-900 tracking-tight mb-2">
-                        ScriptishRx
-                    </h1>
+                    <div className="flex justify-center mb-4">
+                        <img src="/logo.jpg" alt="ScriptishRx" className="h-20 w-auto" />
+                    </div>
                     <p className="text-blue-600 font-medium">Create your account to get started.</p>
                 </div>
 
