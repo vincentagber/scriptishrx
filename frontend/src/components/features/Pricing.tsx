@@ -28,7 +28,7 @@ const plans = [
 
 export const Pricing = () => {
     return (
-        <section className="py-16 md:py-24 relative overflow-hidden bg-slate-50">
+        <section id="pricing" className="py-16 md:py-24 relative overflow-hidden bg-slate-50">
             <div className="container mx-auto px-4 relative z-10">
 
                 {/* Header (Hidden in this specific view but good for semantics, or can be kept visible) */}

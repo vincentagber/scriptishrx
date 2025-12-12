@@ -34,9 +34,9 @@ export default function Home() {
 
           {/* Desktop Nav */}
           <div className="hidden md:flex gap-8 text-sm font-medium text-slate-600">
-            <a href="#" className="hover:text-primary-start transition-colors">Platform</a>
-            <a href="#" className="hover:text-primary-start transition-colors">Solutions</a>
-            <a href="#" className="hover:text-primary-start transition-colors">Pricing</a>
+            <a href="#features" className="hover:text-primary-start transition-colors">Platform</a>
+            <a href="#solutions" className="hover:text-primary-start transition-colors">Solutions</a>
+            <a href="#pricing" className="hover:text-primary-start transition-colors">Pricing</a>
           </div>
 
           <div className="hidden md:flex gap-4">
@@ -63,10 +63,10 @@ export default function Home() {
           mobileMenuOpen ? "opacity-100 translate-x-0" : "opacity-0 translate-x-full pointer-events-none"
         )}>
           <div className="flex flex-col items-center gap-6 text-lg font-medium text-slate-900">
-            <a href="#" onClick={() => setMobileMenuOpen(false)}>Platform</a>
-            <a href="#" onClick={() => setMobileMenuOpen(false)}>Solutions</a>
-            <a href="#" onClick={() => setMobileMenuOpen(false)}>Pricing</a>
-            <a href="#" onClick={() => setMobileMenuOpen(false)}>Contact</a>
+            <a href="#features" onClick={() => setMobileMenuOpen(false)}>Platform</a>
+            <a href="#solutions" onClick={() => setMobileMenuOpen(false)}>Solutions</a>
+            <a href="#pricing" onClick={() => setMobileMenuOpen(false)}>Pricing</a>
+            <a href="#contact" onClick={() => setMobileMenuOpen(false)}>Contact</a>
           </div>
 
           <div className="flex flex-col gap-4 w-full px-8 max-w-sm">

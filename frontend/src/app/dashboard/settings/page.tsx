@@ -552,364 +552,406 @@ export default function SettingsPage() {
         }
     };
 
+    const Tabs = ['Profile', 'Branding', 'AI', 'Integrations', 'Security', 'Billing'];
+
+    const [activeTab, setActiveTab] = useState('Profile');
+
     if (loading) {
         return (
-            <div className="flex h-screen items-center justify-center">
-                <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+            <div className="flex h-screen items-center justify-center bg-[#F3F4F6]">
+                <div className="flex flex-col items-center gap-4">
+                    <Loader2 className="w-10 h-10 animate-spin text-blue-600" />
+                    <p className="text-gray-500 font-medium animate-pulse">Loading settings...</p>
+                </div>
             </div>
         );
     }
 
-    const isAdvanced = settings.plan === 'Advanced';
+    const isAdvanced = settings.plan === 'Advanced' || settings.plan === 'Enterprise';
 
     return (
-        <div className="max-w-5xl mx-auto space-y-8 pb-10 relative">
+        <div className="max-w-6xl mx-auto pb-20 relative px-4 md:px-8">
             {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-
             <WorkflowModal isOpen={isWorkflowModalOpen} onClose={() => setIsWorkflowModalOpen(false)} onSave={handleWorkflowCreate} />
             <AuditLogsModal isOpen={isAuditModalOpen} onClose={() => setIsAuditModalOpen(false)} />
 
-            {/* <IntegrationConfigModal ... /> (Omitted for brevity, logic handles direct connect for now) */}
-
-            <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Settings & Configuration</h1>
-
-            {/* Subscription Section (Placeholder replaced with Real) */}
-            <SubscriptionSettings plan={settings.plan} showToast={showToast} />
-
-            {/* Profile Section */}
-            <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8">
-                <div className="flex items-center gap-3 mb-6 border-b border-gray-100 pb-4">
-                    <div className="p-2 bg-blue-50 rounded-lg">
-                        <User className="w-5 h-5 text-blue-600" />
-                    </div>
-                    <div>
-                        <h2 className="text-lg font-bold text-gray-900">Your Profile</h2>
-                        <p className="text-sm text-gray-500">Manage your personal information.</p>
-                    </div>
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+                <div>
+                    <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Settings</h1>
+                    <p className="text-gray-500 mt-1">Manage your account preferences and configurations.</p>
                 </div>
-
-                <div className="flex flex-col md:flex-row gap-8 items-start">
-                    <div className="flex flex-col items-center gap-4">
-                        <div
-                            className="relative w-32 h-32 rounded-full overflow-hidden border-4 border-gray-50 shadow-inner group cursor-pointer"
-                            onClick={handleAvatarClick}
-                        >
-                            {profile.avatarUrl ? (
-                                <img src={`http://localhost:5000${profile.avatarUrl}`} alt="Avatar" className="w-full h-full object-cover" />
-                            ) : (
-                                <div className="w-full h-full bg-gray-100 flex items-center justify-center text-gray-400">
-                                    <User className="w-12 h-12" />
-                                </div>
-                            )}
-                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                <Camera className="w-8 h-8 text-white" />
-                            </div>
-                            {uploadingAvatar && (
-                                <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                                    <Loader2 className="w-8 h-8 animate-spin text-white" />
-                                </div>
-                            )}
-                        </div>
-                        <input type="file" ref={fileInputRef} onChange={handleAvatarUpload} className="hidden" accept="image/*" />
-                        <p className="text-xs text-center text-gray-500 font-medium">Click to upload</p>
-                    </div>
-
-                    <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
-                        <div>
-                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Full Name</label>
-                            <input
-                                type="text"
-                                className="w-full p-3 bg-gray-50 border-none rounded-xl text-gray-900 font-medium focus:ring-2 focus:ring-black/5 outline-none transition-all hover:bg-gray-100 placeholder-gray-400"
-                                value={profile.name}
-                                onChange={(e) => setProfile({ ...profile, name: e.target.value })}
-                                placeholder="John Doe"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Email Address</label>
-                            <input
-                                type="email"
-                                className={`w-full p-3 bg-gray-50 border-none rounded-xl text-gray-900 font-medium focus:ring-2 outline-none transition-all hover:bg-gray-100 ${profile.email && !isValidEmail(profile.email) ? 'ring-2 ring-red-100 bg-red-50' : 'focus:ring-black/5'}`}
-                                value={profile.email}
-                                onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-                                placeholder="john@example.com"
-                            />
-                        </div>
-                        <div className="md:col-span-2">
-                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Phone Number</label>
-                            <div className="relative">
-                                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                <input
-                                    type="tel"
-                                    className="w-full pl-10 p-3 bg-gray-50 border-none rounded-xl text-gray-900 font-medium focus:ring-2 focus:ring-black/5 outline-none transition-all hover:bg-gray-100 placeholder-gray-400"
-                                    placeholder="+1 (555) 000-0000"
-                                    value={profile.phoneNumber}
-                                    onChange={(e) => setProfile({ ...profile, phoneNumber: e.target.value })}
-                                />
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Branding Section */}
-            <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8">
-                <div className="flex items-center gap-3 mb-6 border-b border-gray-100 pb-4">
-                    <div className="p-2 bg-purple-50 rounded-lg">
-                        <Palette className="w-5 h-5 text-purple-600" />
-                    </div>
-                    <div>
-                        <h2 className="text-lg font-bold text-gray-900">Branding & Appearance</h2>
-                        <p className="text-sm text-gray-500">Customize how your tenant looks.</p>
-                    </div>
-                </div>
-
-                <div className="space-y-6">
-                    <div>
-                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Brand Color</label>
-                        <div className="flex items-center gap-4">
-                            <input
-                                type="color"
-                                className="w-12 h-12 rounded-xl cursor-pointer border-none bg-transparent"
-                                value={settings.brandColor}
-                                onChange={(e) => setSettings({ ...settings, brandColor: e.target.value })}
-                            />
-                            <div className="flex-1">
-                                <input
-                                    type="text"
-                                    className="w-full p-3 bg-gray-50 border-none rounded-xl text-gray-900 font-mono text-sm focus:ring-2 focus:ring-black/5 outline-none"
-                                    value={settings.brandColor}
-                                    onChange={(e) => setSettings({ ...settings, brandColor: e.target.value })}
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Logo URL</label>
-                        <input
-                            type="text"
-                            className={`w-full p-3 bg-gray-50 border-none rounded-xl text-gray-900 focus:ring-2 outline-none ${settings.logoUrl && !isValidUrl(settings.logoUrl) ? 'ring-2 ring-red-100 bg-red-50' : 'focus:ring-black/5'}`}
-                            placeholder="https://example.com/logo.png"
-                            value={settings.logoUrl}
-                            onChange={(e) => setSettings({ ...settings, logoUrl: e.target.value })}
-                        />
-                    </div>
-                </div>
-            </div>
-
-            {/* AI Configuration */}
-            <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8">
-                <div className="flex items-center justify-between mb-6 border-b border-gray-100 pb-4">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-indigo-50 rounded-lg">
-                            <Bot className="w-5 h-5 text-indigo-600" />
-                        </div>
-                        <div>
-                            <h2 className="text-lg font-bold text-gray-900">AI Configuration</h2>
-                            <p className="text-sm text-gray-500">Tailor your AI assistant's persona.</p>
-                        </div>
-                    </div>
-                    {!isAdvanced && (
-                        <button className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full hover:bg-indigo-100 transition-colors">
-                            Upgrade to Advanced
-                        </button>
-                    )}
-                </div>
-
-                <div className="space-y-6">
-                    <div>
-                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">AI Name</label>
-                        <input
-                            type="text"
-                            className="w-full p-3 bg-gray-50 border-none rounded-xl text-gray-900 font-medium focus:ring-2 focus:ring-black/5 outline-none"
-                            value={settings.aiName}
-                            onChange={(e) => setSettings({ ...settings, aiName: e.target.value })}
-                        />
-                    </div>
-
-                    <div className={`relative ${!isAdvanced ? 'opacity-60 pointer-events-none select-none' : ''}`}>
-                        <div className="flex justify-between items-center mb-2">
-                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Custom System Prompt</label>
-                            {!isAdvanced && <Lock className="w-3 h-3 text-gray-400" />}
-                        </div>
-                        <textarea
-                            className="w-full p-4 bg-gray-50 border-none rounded-xl text-gray-900 font-mono text-sm h-32 focus:ring-2 focus:ring-black/5 outline-none resize-none"
-                            placeholder={isAdvanced ? "Enter custom instructions for the AI..." : "Unlock Advanced Plan to customize AI instructions."}
-                            value={settings.customSystemPrompt}
-                            onChange={(e) => setSettings({ ...settings, customSystemPrompt: e.target.value })}
-                        />
-                        {!isAdvanced && (
-                            <div className="absolute inset-0 bg-white/10 backdrop-blur-[1px] rounded-xl flex items-center justify-center">
-                                <span className="bg-white shadow-lg px-4 py-2 rounded-lg text-xs font-bold text-gray-600 flex items-center gap-2">
-                                    <Shield className="w-3 h-3 text-amber-500" />
-                                    Advanced Plan Only
-                                </span>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
-
-            {/* Integrations Card (Advanced) */}
-            <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8">
-                <div className="flex items-center justify-between mb-6 border-b border-gray-100 pb-4">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-green-50 rounded-lg">
-                            <Building className="w-5 h-5 text-green-600" />
-                        </div>
-                        <div>
-                            <h2 className="text-lg font-bold text-gray-900">Integrations</h2>
-                            <p className="text-sm text-gray-500">Connect external tools.</p>
-                        </div>
-                    </div>
-                    {!isAdvanced && (
-                        <span className="px-2 py-1 bg-amber-100 text-amber-700 text-xs font-bold rounded-lg flex items-center">
-                            <Shield className="w-3 h-3 mr-1" /> Advanced
-                        </span>
-                    )}
-                </div>
-
-                <div className={`space-y-4 ${!isAdvanced ? "opacity-80" : ""}`}>
-                    <IntegrationItem
-                        name="Google Calendar"
-                        description="Sync bookings automatically."
-                        connectedKey="googleCalendar"
-                        integrations={integrations}
-                        onConnectClick={handleConnectClick}
-                        onDisconnectClick={handleDisconnect}
-                        loading={integrationLoading}
-                        icon={Calendar}
-                    />
-                    <IntegrationItem
-                        name="Stripe Payments"
-                        description="Process client invoices."
-                        connectedKey="stripe"
-                        integrations={integrations}
-                        onConnectClick={handleConnectClick}
-                        onDisconnectClick={handleDisconnect}
-                        loading={integrationLoading}
-                        icon={CreditCard}
-                    />
-                    <IntegrationItem
-                        name="Mailchimp"
-                        description="Sync leads to email lists."
-                        connectedKey="mailchimp"
-                        integrations={integrations}
-                        onConnectClick={handleConnectClick}
-                        onDisconnectClick={handleDisconnect}
-                        loading={integrationLoading}
-                        icon={Mail}
-                    />
-                </div>
-            </div>
-
-            {/* Workflows Card (Advanced) */}
-            <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8">
-                <div className="flex items-center justify-between mb-6 border-b border-gray-100 pb-4">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-orange-50 rounded-lg">
-                            <Activity className="w-5 h-5 text-orange-600" />
-                        </div>
-                        <div>
-                            <h2 className="text-lg font-bold text-gray-900">Custom Workflows</h2>
-                            <p className="text-sm text-gray-500">Automate business logic.</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="space-y-4">
-                    {workflows.map((wf) => (
-                        <div key={wf.id} className="p-4 border border-gray-200 rounded-xl flex items-center justify-between group cursor-pointer hover:border-gray-300 transition-colors bg-white">
-                            <div>
-                                <p className="font-bold text-gray-900">{wf.name}</p>
-                                <p className="text-xs text-gray-500 group-hover:text-gray-700 capitalize">Trigger: {wf.trigger.replace('_', ' ')}</p>
-                            </div>
-                            <button onClick={() => handleWorkflowDelete(wf.id)} className="p-2 text-slate-300 hover:text-red-500 transition-colors">
-                                <Trash2 className="w-4 h-4" />
-                            </button>
-                        </div>
-                    ))}
-
-                    <button
-                        onClick={() => setIsWorkflowModalOpen(true)}
-                        className="w-full py-3 border-2 border-dashed border-gray-300 text-gray-400 rounded-xl font-bold text-sm hover:border-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-all flex items-center justify-center gap-2"
-                    >
-                        <Plus className="w-4 h-4" /> Create New Workflow
-                    </button>
-                </div>
-            </div>
-
-            {/* Security Section */}
-            <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8">
-                <div className="flex items-center justify-between mb-6 border-b border-gray-100 pb-4">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-red-50 rounded-lg">
-                            <Lock className="w-5 h-5 text-red-600" />
-                        </div>
-                        <div>
-                            <h2 className="text-lg font-bold text-gray-900">Security</h2>
-                            <p className="text-sm text-gray-500">Review system access and passwords.</p>
-                        </div>
-                    </div>
-                    <button
-                        onClick={() => setIsAuditModalOpen(true)}
-                        className="text-xs font-bold text-slate-600 bg-slate-100 px-3 py-1 rounded-full hover:bg-slate-200 transition-colors flex items-center gap-2"
-                    >
-                        <Shield className="w-3 h-3" /> View Audit Logs
-                    </button>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="md:col-span-2">
-                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Current Password</label>
-                        <input
-                            type="password"
-                            className="w-full p-3 bg-gray-50 border-none rounded-xl text-gray-900 font-medium focus:ring-2 focus:ring-black/5 outline-none"
-                            value={passwords.currentPassword}
-                            onChange={(e) => setPasswords({ ...passwords, currentPassword: e.target.value })}
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">New Password</label>
-                        <input
-                            type="password"
-                            className="w-full p-3 bg-gray-50 border-none rounded-xl text-gray-900 font-medium focus:ring-2 focus:ring-black/5 outline-none"
-                            value={passwords.newPassword}
-                            onChange={(e) => setPasswords({ ...passwords, newPassword: e.target.value })}
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Confirm New Password</label>
-                        <input
-                            type="password"
-                            className="w-full p-3 bg-gray-50 border-none rounded-xl text-gray-900 font-medium focus:ring-2 focus:ring-black/5 outline-none"
-                            value={passwords.confirmPassword}
-                            onChange={(e) => setPasswords({ ...passwords, confirmPassword: e.target.value })}
-                        />
-                    </div>
-                    <div className="md:col-span-2 flex justify-end">
-                        <button
-                            onClick={handlePasswordChange}
-                            disabled={!passwords.currentPassword || !passwords.newPassword}
-                            className="px-4 py-2 bg-gray-900 text-white font-bold rounded-xl hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                        >
-                            Change Password
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            {/* Action Bar */}
-            <div className="flex justify-end pt-4">
                 <button
                     onClick={handleSave}
                     disabled={saving}
-                    className="flex items-center px-8 py-4 bg-black text-white font-bold rounded-2xl hover:bg-gray-800 hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-gray-200 disabled:opacity-70 disabled:cursor-not-allowed"
+                    className="flex items-center px-6 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all shadow-blue-200 disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none"
                 >
-                    {saving && <Loader2 className="w-5 h-5 mr-2 animate-spin" />}
+                    {saving ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Save className="w-5 h-5 mr-2" />}
                     Save Changes
                 </button>
+            </div>
+
+            <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden min-h-[600px] flex flex-col md:flex-row">
+                {/* Sidebar Navigation */}
+                <div className="w-full md:w-64 bg-slate-50/50 border-b md:border-b-0 md:border-r border-slate-100 p-4 flex flex-row md:flex-col gap-2 overflow-x-auto md:overflow-visible">
+                    {Tabs.map(tab => (
+                        <button
+                            key={tab}
+                            onClick={() => setActiveTab(tab)}
+                            className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all whitespace-nowrap
+                                ${activeTab === tab
+                                    ? 'bg-white text-blue-600 shadow-md shadow-blue-50 border border-blue-50'
+                                    : 'text-slate-500 hover:bg-white hover:text-slate-700 hover:shadow-sm'
+                                }`}
+                        >
+                            {tab === 'Profile' && <User className="w-4 h-4" />}
+                            {tab === 'Branding' && <Palette className="w-4 h-4" />}
+                            {tab === 'AI' && <Bot className="w-4 h-4" />}
+                            {tab === 'Integrations' && <Building className="w-4 h-4" />}
+                            {tab === 'Security' && <Shield className="w-4 h-4" />}
+                            {tab === 'Billing' && <CreditCard className="w-4 h-4" />}
+                            {tab}
+                        </button>
+                    ))}
+                </div>
+
+                {/* Content Area */}
+                <div className="flex-1 p-6 md:p-10 overflow-y-auto">
+
+                    {/* PROFILE TAB */}
+                    {activeTab === 'Profile' && (
+                        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            <div>
+                                <h2 className="text-xl font-bold text-gray-900 mb-1">Personal Profile</h2>
+                                <p className="text-gray-500 text-sm">Update your photo and personal details.</p>
+                            </div>
+
+                            <div className="flex flex-col md:flex-row gap-8 items-center md:items-start p-6 bg-slate-50/50 rounded-2xl border border-slate-100">
+                                <div className="flex flex-col items-center gap-3">
+                                    <div
+                                        onClick={() => fileInputRef.current?.click()}
+                                        className="relative w-32 h-32 rounded-full overflow-hidden border-4 border-white shadow-lg cursor-pointer group hover:border-blue-50 transition-all"
+                                    >
+                                        <img
+                                            src={profile.avatarUrl ? (profile.avatarUrl.startsWith('http') ? profile.avatarUrl : `http://localhost:5000${profile.avatarUrl}`) : `https://ui-avatars.com/api/?name=${profile.name}&background=0D8ABC&color=fff`}
+                                            alt="Avatar"
+                                            className="w-full h-full object-cover transition-transform group-hover:scale-110"
+                                        />
+                                        <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                            <Camera className="w-8 h-8 text-white drop-shadow-md" />
+                                        </div>
+                                        {uploadingAvatar && (
+                                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-10">
+                                                <Loader2 className="w-8 h-8 animate-spin text-white" />
+                                            </div>
+                                        )}
+                                    </div>
+                                    <input type="file" ref={fileInputRef} onChange={handleAvatarUpload} className="hidden" accept="image/*" />
+                                    <button onClick={() => fileInputRef.current?.click()} className="text-sm font-semibold text-blue-600 hover:text-blue-700">Change Photo</button>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Full Name</label>
+                                        <div className="relative">
+                                            <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                            <input
+                                                type="text"
+                                                className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all font-medium text-gray-900"
+                                                value={profile.name}
+                                                onChange={(e) => setProfile({ ...profile, name: e.target.value })}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Email Address</label>
+                                        <div className="relative">
+                                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                            <input
+                                                type="email"
+                                                className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all font-medium text-gray-900"
+                                                value={profile.email}
+                                                onChange={(e) => setProfile({ ...profile, email: e.target.value })}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2 md:col-span-2">
+                                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Phone Number</label>
+                                        <div className="relative">
+                                            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                            <input
+                                                type="tel"
+                                                className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all font-medium text-gray-900"
+                                                value={profile.phoneNumber}
+                                                onChange={(e) => setProfile({ ...profile, phoneNumber: e.target.value })}
+                                                placeholder="+1 (555) 555-5555"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* BRANDING TAB */}
+                    {activeTab === 'Branding' && (
+                        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            <div>
+                                <h2 className="text-xl font-bold text-gray-900 mb-1">Company Branding</h2>
+                                <p className="text-gray-500 text-sm">Customize the look and feel of your client portal.</p>
+                            </div>
+
+                            <div className="p-6 bg-slate-50/50 rounded-2xl border border-slate-100 space-y-6">
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Brand Color</label>
+                                    <div className="flex items-center gap-4">
+                                        <div className="relative group">
+                                            <input
+                                                type="color"
+                                                className="w-14 h-14 rounded-xl cursor-pointer border-none p-0 overflow-hidden shadow-sm"
+                                                value={settings.brandColor}
+                                                onChange={(e) => setSettings({ ...settings, brandColor: e.target.value })}
+                                            />
+                                            <div className="absolute inset-0 ring-1 ring-black/10 rounded-xl pointer-events-none" />
+                                        </div>
+                                        <div className="flex-1">
+                                            <input
+                                                type="text"
+                                                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-100 focus:border-blue-500 outline-none font-mono text-sm uppercase"
+                                                value={settings.brandColor}
+                                                onChange={(e) => setSettings({ ...settings, brandColor: e.target.value })}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Logo URL</label>
+                                    <div className="relative">
+                                        <input
+                                            type="text"
+                                            className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-100 focus:border-blue-500 outline-none font-medium text-gray-900"
+                                            placeholder="https://example.com/logo.png"
+                                            value={settings.logoUrl}
+                                            onChange={(e) => setSettings({ ...settings, logoUrl: e.target.value })}
+                                        />
+                                        {settings.logoUrl && (
+                                            <div className="absolute right-2 top-1/2 -translate-y-1/2 p-1 bg-white border border-gray-100 rounded-lg shadow-sm">
+                                                <img src={settings.logoUrl} alt="Preview" className="h-6 w-6 object-contain" onError={(e) => (e.target as HTMLImageElement).style.display = 'none'} />
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* AI TAB */}
+                    {activeTab === 'AI' && (
+                        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            <div>
+                                <h2 className="text-xl font-bold text-gray-900 mb-1">AI Configuration</h2>
+                                <p className="text-gray-500 text-sm">Tailor your AI assistant's persona and instructions.</p>
+                            </div>
+
+                            <div className="p-6 bg-slate-50/50 rounded-2xl border border-slate-100 space-y-6">
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Assistant Name</label>
+                                    <div className="relative">
+                                        <Bot className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                        <input
+                                            type="text"
+                                            className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-100 focus:border-blue-500 outline-none font-medium text-gray-900"
+                                            value={settings.aiName}
+                                            onChange={(e) => setSettings({ ...settings, aiName: e.target.value })}
+                                            placeholder="e.g. HealthBot 9000"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <div className="flex justify-between items-center">
+                                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Custom System Prompt</label>
+                                        {!isAdvanced && (
+                                            <span className="flex items-center gap-1 text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded-full border border-amber-100">
+                                                <Lock className="w-3 h-3" /> Growth/Enterprise Feature
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div className="relative">
+                                        <textarea
+                                            className={`w-full p-4 bg-white border border-gray-200 rounded-xl text-sm h-40 focus:ring-2 focus:ring-blue-100 focus:border-blue-500 outline-none resize-none leading-relaxed ${!isAdvanced ? 'blur-[2px] select-none pointer-events-none opacity-50' : 'text-gray-900'}`}
+                                            placeholder="Enter detailed instructions for your AI agent..."
+                                            value={settings.customSystemPrompt}
+                                            onChange={(e) => setSettings({ ...settings, customSystemPrompt: e.target.value })}
+                                        />
+                                        {!isAdvanced && (
+                                            <div className="absolute inset-0 flex items-center justify-center">
+                                                <button className="bg-white shadow-xl px-4 py-2 rounded-xl text-xs font-bold text-gray-800 flex items-center gap-2 border border-gray-100 hover:scale-105 transition-transform">
+                                                    Upgrade to Edit
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* INTEGRATIONS TAB */}
+                    {activeTab === 'Integrations' && (
+                        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            <div className="flex justify-between items-end">
+                                <div>
+                                    <h2 className="text-xl font-bold text-gray-900 mb-1">Integrations & Workflows</h2>
+                                    <p className="text-gray-500 text-sm">Connect your tools and automate tasks.</p>
+                                </div>
+                                <button
+                                    onClick={() => setIsWorkflowModalOpen(true)}
+                                    className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white text-xs font-bold rounded-lg hover:bg-black transition-colors shadow-lg shadow-gray-200"
+                                >
+                                    <Plus className="w-3.5 h-3.5" /> New Workflow
+                                </button>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <IntegrationItem
+                                    name="Google Calendar"
+                                    description="Two-way sync for bookings."
+                                    connectedKey="googleCalendar"
+                                    integrations={integrations}
+                                    onConnectClick={handleConnectClick}
+                                    onDisconnectClick={handleDisconnect}
+                                    loading={integrationLoading}
+                                    icon={Calendar}
+                                />
+                                <IntegrationItem
+                                    name="Stripe Payments"
+                                    description="Accept payments & send invoices."
+                                    connectedKey="stripe"
+                                    integrations={integrations}
+                                    onConnectClick={handleConnectClick}
+                                    onDisconnectClick={handleDisconnect}
+                                    loading={integrationLoading}
+                                    icon={CreditCard}
+                                />
+                                <IntegrationItem
+                                    name="Mailchimp"
+                                    description="Sync client emails automatically."
+                                    connectedKey="mailchimp"
+                                    integrations={integrations}
+                                    onConnectClick={handleConnectClick}
+                                    onDisconnectClick={handleDisconnect}
+                                    loading={integrationLoading}
+                                    icon={Mail}
+                                />
+                            </div>
+
+                            <div>
+                                <h3 className="text-sm font-bold text-gray-900 mb-4 border-b border-gray-100 pb-2">Active Workflows</h3>
+                                {workflows.length === 0 ? (
+                                    <div className="p-8 text-center bg-slate-50 border border-dashed border-slate-200 rounded-2xl">
+                                        <Activity className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                                        <p className="text-slate-500 text-sm">No custom workflows yet.</p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-3">
+                                        {workflows.map((wf) => (
+                                            <div key={wf.id} className="p-4 bg-white border border-gray-200 rounded-xl flex items-center justify-between group hover:border-blue-200 hover:shadow-sm transition-all">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
+                                                        <Zap className="w-4 h-4" />
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-bold text-gray-900 text-sm">{wf.name}</p>
+                                                        <p className="text-xs text-gray-500 capitalize">{wf.trigger.replace(/_/g, ' ')} → {wf.action.replace(/_/g, ' ')}</p>
+                                                    </div>
+                                                </div>
+                                                <button onClick={() => handleWorkflowDelete(wf.id)} className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* SECURITY TAB */}
+                    {activeTab === 'Security' && (
+                        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            <div className="flex justify-between items-end">
+                                <div>
+                                    <h2 className="text-xl font-bold text-gray-900 mb-1">Security Settings</h2>
+                                    <p className="text-gray-500 text-sm">Manage password and access logs.</p>
+                                </div>
+                                <button
+                                    onClick={() => setIsAuditModalOpen(true)}
+                                    className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-600 text-xs font-bold rounded-lg hover:bg-slate-200 transition-colors"
+                                >
+                                    <FileText className="w-3.5 h-3.5" /> View Audit Logs
+                                </button>
+                            </div>
+
+                            <div className="p-6 bg-slate-50/50 rounded-2xl border border-slate-100 space-y-6">
+                                <div className="space-y-4">
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Current Password</label>
+                                        <div className="relative">
+                                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                            <input
+                                                type="password"
+                                                className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all font-medium text-gray-900"
+                                                value={passwords.currentPassword}
+                                                onChange={(e) => setPasswords({ ...passwords, currentPassword: e.target.value })}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">New Password</label>
+                                            <input
+                                                type="password"
+                                                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all font-medium text-gray-900"
+                                                value={passwords.newPassword}
+                                                onChange={(e) => setPasswords({ ...passwords, newPassword: e.target.value })}
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Confirm New Password</label>
+                                            <input
+                                                type="password"
+                                                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all font-medium text-gray-900"
+                                                value={passwords.confirmPassword}
+                                                onChange={(e) => setPasswords({ ...passwords, confirmPassword: e.target.value })}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="pt-2 flex justify-end">
+                                        <button
+                                            onClick={handlePasswordChange}
+                                            disabled={!passwords.currentPassword || !passwords.newPassword}
+                                            className="px-6 py-2 bg-slate-800 text-white text-sm font-bold rounded-xl hover:bg-slate-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                        >
+                                            Update Password
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* BILLING TAB */}
+                    {activeTab === 'Billing' && (
+                        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            <div>
+                                <h2 className="text-xl font-bold text-gray-900 mb-1">Billing & Subscription</h2>
+                                <p className="text-gray-500 text-sm">Manage your plan and payment methods.</p>
+                            </div>
+                            <SubscriptionSettings plan={settings.plan} showToast={showToast} />
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );

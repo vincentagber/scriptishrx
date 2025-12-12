@@ -62,7 +62,7 @@ export const TrustedBy = () => (
 
 // --- Feature Steps ---
 export const FeatureSteps = () => (
-    <section className="py-24 bg-white relative overflow-hidden">
+    <section id="features" className="py-24 bg-white relative overflow-hidden">
         {/* Background Decorative Line */}
         <div className="absolute top-1/2 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-slate-200 to-transparent hidden md:block -translate-y-12" />
 
@@ -131,7 +131,7 @@ export const FeatureSteps = () => (
 
 // --- Feature Showcase 1 & 2 ---
 export const FeatureShowcase = () => (
-    <section className="py-16 md:py-24 bg-slate-50 overflow-hidden">
+    <section id="solutions" className="py-16 md:py-24 bg-slate-50 overflow-hidden">
         <div className="container mx-auto px-4 space-y-24 md:space-y-32">
 
             {/* Feature 1 */}
@@ -519,7 +519,7 @@ export const Newsletter = () => {
 
 // --- Footer ---
 export const Footer = () => (
-    <footer className="bg-slate-900 text-white py-12 md:py-20 border-t border-slate-800">
+    <footer id="contact" className="bg-slate-900 text-white py-12 md:py-20 border-t border-slate-800">
         <div className="container mx-auto px-4">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-12 mb-12 md:mb-16">
                 <div className="col-span-2 lg:col-span-1 space-y-6">
