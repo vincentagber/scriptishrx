@@ -1,8 +1,8 @@
 import axios from 'axios';
 
 const api = axios.create({
-    baseURL: process.env.NEXT_PUBLIC_API_URL || '/api',
-    withCredentials: true, // Important for cookies (Refresh Token)
+    baseURL: typeof window !== 'undefined' ? '/api' : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'),
+    withCredentials: true,
     headers: {
         'Content-Type': 'application/json',
     },
@@ -28,8 +28,9 @@ api.interceptors.response.use(
             originalRequest._retry = true;
 
             try {
-                // Attempt Refresh (HttpOnly cookie sent automatically)
-                const { data } = await axios.post(`${process.env.NEXT_PUBLIC_API_URL || '/api'}/auth/refresh`, {}, {
+                // Attempt Refresh (use relative path in browser)
+                const refreshUrl = typeof window !== 'undefined' ? '/api/auth/refresh' : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/auth/refresh`;
+                const { data } = await axios.post(refreshUrl, {}, {
                     withCredentials: true
                 });
 
