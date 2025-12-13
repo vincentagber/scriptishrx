@@ -19,3 +19,4 @@ yarn-error.log*
 *.log
 .env
 RENDER_ENV_VARS.txt
+backend/.env
