@@ -11,6 +11,8 @@ echo "🚀 Starting Render Build..."
 echo "📦 Installing Backend Dependencies..."
 cd backend
 npm install
+echo "🗄️ Generating Prisma Client..."
+npx prisma generate
 cd ..
 
 # 3. Install Frontend Dependencies
