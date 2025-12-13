@@ -19,12 +19,18 @@ app.use(express.json());
 app.use(cookieParser());
 
 const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 100,
+    windowMs: (process.env.RATE_LIMIT_WINDOW_MS || 15 * 60 * 1000), // Default 15 minutes
+    max: (process.env.RATE_LIMIT_MAX_REQUESTS || 100), // Limit each IP to 100 requests per windowMs
     standardHeaders: true,
     legacyHeaders: false,
+    message: {
+        success: false,
+        error: 'Too many requests, please try again later.'
+    }
 });
-app.use(limiter);
+
+// Apply rate limiting ONLY to API routes, not static files
+app.use('/api', limiter);
 
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
