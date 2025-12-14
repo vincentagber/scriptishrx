@@ -22,8 +22,8 @@ app.use(express.json());
 app.use(cookieParser());
 
 const limiter = rateLimit({
-    windowMs: (process.env.RATE_LIMIT_WINDOW_MS || 15 * 60 * 1000), // Default 15 minutes
-    max: (process.env.RATE_LIMIT_MAX_REQUESTS || 100), // Limit each IP to 100 requests per windowMs
+    windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // Default 15 minutes
+    max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100, // Limit each IP to 100 requests per windowMs
     standardHeaders: true,
     legacyHeaders: false,
     message: {
