@@ -46,12 +46,24 @@ export default function DashboardPage() {
     const [systemLoad, setSystemLoad] = useState(24);
     const [greeting, setGreeting] = useState('');
 
-    // Simulate live data fluctuations
+    // Poll System Status
     useEffect(() => {
-        const interval = setInterval(() => {
-            setLiveUsers(prev => Math.max(5, Math.min(50, prev + Math.floor(Math.random() * 5) - 2)));
-            setSystemLoad(prev => Math.max(10, Math.min(90, prev + Math.floor(Math.random() * 10) - 5)));
-        }, 3000);
+        const fetchSystemStatus = async () => {
+            try {
+                const { data } = await import('@/lib/api').then(m => m.default.get('/health'));
+                if (data.system) {
+                    setLiveUsers(data.system.activeUsers);
+                    setSystemLoad(data.system.cpuLoad);
+                }
+            } catch (e) {
+                // Keep fallback mock if API fails (e.g., while server restarting)
+                // But don't randomize wildly
+            }
+        };
+
+        fetchSystemStatus();
+        const interval = setInterval(fetchSystemStatus, 10000); // 10s poll
+
         return () => clearInterval(interval);
     }, []);
 

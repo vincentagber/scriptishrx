@@ -253,12 +253,59 @@ app.use('/api/voicecake', voiceCakeRouter);
 app.use('/webhooks', webhooksRouter);
 app.use('/api/marketing', marketingRouter);
 
-// ==================== HEALTH CHECK ====================
-// Health Check moved to /api/health
+const os = require('os');
+
+// ==================== ACTIVE USER TRACKING ====================
+// Simple in-memory tracker for "users active in last 5 minutes"
+const activeUsers = new Map(); // UserId -> Timestamp
+
+// Middleware to update active status
+app.use((req, res, next) => {
+    if (req.user && req.user.id) {
+        activeUsers.set(req.user.id, Date.now());
+    }
+    // Cleanup old users every ~100 requests (optimization)
+    if (Math.random() > 0.99) {
+        const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
+        for (const [uid, timestamp] of activeUsers.entries()) {
+            if (timestamp < fiveMinutesAgo) activeUsers.delete(uid);
+        }
+    }
+    next();
+});
+
+// ==================== HEALTH / SYSTEM STATUS ====================
 app.get('/api/health', (req, res) => {
+    // 1. Calculate Active Users (cleanup first)
+    const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
+    let currentActive = 0;
+    for (const [uid, timestamp] of activeUsers.entries()) {
+        if (timestamp > fiveMinutesAgo) currentActive++;
+        else activeUsers.delete(uid);
+    }
+    // Add a minimum floor of 1 (the requester) if auth'd, or just a baseline for realistic feel if dev
+    if (currentActive === 0 && process.env.NODE_ENV === 'development') currentActive = 1;
+
+    // 2. Calculate System Load using OS module
+    const cpus = os.cpus().length;
+    const loadAvg = os.loadavg()[0]; // 1 minute load avg
+    // Normalize load to percentage (can exceed 100% if overloaded, cap at 100 for UI)
+    const loadPercentage = Math.min(Math.round((loadAvg / cpus) * 100), 100) || 5;
+
+    // 3. Memory Usage
+    const totalMem = os.totalmem();
+    const freeMem = os.freemem();
+    const usedMem = totalMem - freeMem;
+    const memPercentage = Math.round((usedMem / totalMem) * 100);
+
     res.json({
         status: 'ok',
         version: '2.0.0',
+        system: {
+            activeUsers: currentActive,
+            cpuLoad: loadPercentage, // "System Load"
+            memoryUsage: memPercentage
+        },
         env: process.env.NODE_ENV,
         routes: {
             auth: true,
