@@ -22,6 +22,7 @@ npm install
 
 # 4. Build Frontend (Next.js Static Export)
 echo "🏗️ Building Frontend..."
+rm -rf .next out
 npm run build
 cd ..
 
