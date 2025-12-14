@@ -239,6 +239,164 @@ function SubscriptionSettings({ plan, showToast }: any) {
     )
 }
 
+// --- Voice Agent Settings ---
+function VoiceAgentSettings({ showToast }: { showToast: (msg: string, type: 'success' | 'error') => void }) {
+    const [agents, setAgents] = useState<any[]>([]);
+    const [currentAgent, setCurrentAgent] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
+    const [linking, setLinking] = useState(false);
+    const [testPhone, setTestPhone] = useState('');
+    const [calling, setCalling] = useState(false);
+
+    useEffect(() => {
+        fetchAgentData();
+    }, []);
+
+    const fetchAgentData = async () => {
+        setLoading(true);
+        const token = localStorage.getItem('token');
+        try {
+            // 1. Get List of All Available Agents
+            const agentsRes = await fetch('http://localhost:5000/api/voicecake/agents', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (agentsRes.ok) {
+                const data = await agentsRes.json();
+                setAgents(data.agents || []);
+            }
+
+            // 2. Get Currently Linked Agent
+            const currentRes = await fetch('http://localhost:5000/api/voicecake/tenant/agent', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (currentRes.ok) {
+                const data = await currentRes.json();
+                setCurrentAgent(data.agent);
+            }
+        } catch (error) {
+            console.error('Failed to fetch voice data:', error);
+            showToast('Failed to load voice agent data.', 'error');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleLinkAgent = async (agentId: string) => {
+        setLinking(true);
+        const token = localStorage.getItem('token');
+        try {
+            const res = await fetch('http://localhost:5000/api/voicecake/tenant/link-agent', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ agentId })
+            });
+
+            if (res.ok) {
+                showToast('Agent linked successfully!', 'success');
+                fetchAgentData(); // Refresh state
+            } else {
+                showToast('Failed to link agent.', 'error');
+            }
+        } catch (error) {
+            showToast('Network error while linking agent.', 'error');
+        } finally {
+            setLinking(false);
+        }
+    };
+
+    const handleTestCall = async () => {
+        if (!testPhone) return showToast('Please enter a phone number.', 'error');
+        setCalling(true);
+        const token = localStorage.getItem('token');
+        try {
+            const res = await fetch('http://localhost:5000/api/voicecake/calls/outbound', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ phoneNumber: testPhone })
+            });
+
+            const data = await res.json();
+            if (res.ok) {
+                showToast('Test call initiated!', 'success');
+            } else {
+                showToast(data.error || 'Failed to start call.', 'error');
+            }
+        } catch (error) {
+            showToast('Call failed.', 'error');
+        } finally {
+            setCalling(false);
+        }
+    };
+
+    if (loading) return <div className="flex items-center justify-center p-8"><Loader2 className="animate-spin text-gray-400" /></div>;
+
+    return (
+        <div className="space-y-6">
+            {/* Current Status */}
+            <div className={`p-4 rounded-xl border ${currentAgent ? 'bg-green-50 border-green-100' : 'bg-gray-50 border-gray-200'} transition-all`}>
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-lg ${currentAgent ? 'bg-green-100 text-green-600' : 'bg-gray-200 text-gray-500'}`}>
+                            {currentAgent ? <Phone className="w-5 h-5" /> : <Shield className="w-5 h-5" />}
+                        </div>
+                        <div>
+                            <h3 className="text-sm font-bold text-gray-900">{currentAgent ? 'Active Voice Agent' : 'No Agent Configured'}</h3>
+                            <p className="text-xs text-gray-500">{currentAgent ? `Connected to ${currentAgent.name}` : 'Select an agent below to enable voice features.'}</p>
+                        </div>
+                    </div>
+                    {currentAgent && <span className="text-xs font-bold text-green-600 bg-green-100 px-3 py-1 rounded-full uppercase tracking-wider">Online</span>}
+                </div>
+            </div>
+
+            {/* Agent Selection */}
+            <div>
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 block">Select Available Agent</label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {agents.map(agent => (
+                        <div
+                            key={agent.id}
+                            onClick={() => handleLinkAgent(agent.id)}
+                            className={`cursor-pointer p-4 rounded-xl border transition-all hover:shadow-md ${currentAgent?.id === agent.id ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-500' : 'border-gray-200 bg-white hover:border-blue-300'}`}
+                        >
+                            <div className="flex justify-between items-center mb-2">
+                                <span className="font-bold text-gray-900">{agent.name}</span>
+                                {currentAgent?.id === agent.id && <Check className="w-4 h-4 text-blue-600" />}
+                            </div>
+                            <p className="text-xs text-gray-500 truncate">{agent.id}</p>
+                        </div>
+                    ))}
+                    {agents.length === 0 && <p className="text-sm text-gray-400 col-span-2">No agents found in your VoiceCake account.</p>}
+                </div>
+            </div>
+
+            {/* Test Call */}
+            {currentAgent && (
+                <div className="pt-6 border-t border-gray-100">
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 block">Test Your Assistant</label>
+                    <div className="flex gap-3">
+                        <input
+                            type="tel"
+                            placeholder="+1 (555) 000-0000"
+                            value={testPhone}
+                            onChange={(e) => setTestPhone(e.target.value)}
+                            className="flex-1 px-4 py-2 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-100 text-sm font-medium"
+                        />
+                        <button
+                            onClick={handleTestCall}
+                            disabled={calling || !testPhone}
+                            className="px-5 py-2 bg-black text-white font-bold text-sm rounded-xl hover:bg-gray-800 disabled:opacity-50 transition-all flex items-center gap-2"
+                        >
+                            {calling ? <Loader2 className="w-4 h-4 animate-spin" /> : <Phone className="w-4 h-4" />}
+                            Call Me
+                        </button>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-2">Enter your phone number to receive a test call from {currentAgent.name}.</p>
+                </div>
+            )}
+        </div>
+    );
+}
+
 // --- Main Page Component ---
 
 export default function SettingsPage() {
@@ -552,7 +710,7 @@ export default function SettingsPage() {
         }
     };
 
-    const Tabs = ['Profile', 'Branding', 'AI', 'Integrations', 'Security', 'Billing'];
+    const Tabs = ['Profile', 'Branding', 'AI', 'Voice Agent', 'Integrations', 'Security', 'Billing'];
 
     const [activeTab, setActiveTab] = useState('Profile');
 
@@ -606,6 +764,7 @@ export default function SettingsPage() {
                             {tab === 'Profile' && <User className="w-4 h-4" />}
                             {tab === 'Branding' && <Palette className="w-4 h-4" />}
                             {tab === 'AI' && <Bot className="w-4 h-4" />}
+                            {tab === 'Voice Agent' && <Phone className="w-4 h-4" />}
                             {tab === 'Integrations' && <Building className="w-4 h-4" />}
                             {tab === 'Security' && <Shield className="w-4 h-4" />}
                             {tab === 'Billing' && <CreditCard className="w-4 h-4" />}
@@ -793,6 +952,20 @@ export default function SettingsPage() {
                                         )}
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* VOICE AGENT TAB */}
+                    {activeTab === 'Voice Agent' && (
+                        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            <div>
+                                <h2 className="text-xl font-bold text-gray-900 mb-1">Voice Agent Configuration</h2>
+                                <p className="text-gray-500 text-sm">Connect your VoiceCake agent to handle inbound and outbound calls.</p>
+                            </div>
+
+                            <div className="p-6 bg-slate-50/50 rounded-2xl border border-slate-100 space-y-6">
+                                <VoiceAgentSettings showToast={showToast} />
                             </div>
                         </div>
                     )}
