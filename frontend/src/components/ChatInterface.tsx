@@ -6,7 +6,9 @@ import { cn } from '@/lib/utils';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 
-const API_URL = typeof window !== 'undefined' ? '' : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000');
+const API_URL = typeof window !== 'undefined' && process.env.NODE_ENV === 'development'
+    ? 'http://localhost:5000'
+    : (typeof window !== 'undefined' ? '' : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'));
 
 interface Message {
     id: string;
@@ -101,7 +103,7 @@ export default function ChatInterface({ tenantId: propTenantId, token, isDashboa
         setMessages(prev => [...prev, tempUserMsg]);
 
         try {
-            const apiUrl = typeof window !== 'undefined' ? '' : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000');
+            const apiUrl = API_URL;
             const tenantId = propTenantId || process.env.NEXT_PUBLIC_LANDING_TENANT_ID;
 
             const headers: any = { 'Content-Type': 'application/json' };

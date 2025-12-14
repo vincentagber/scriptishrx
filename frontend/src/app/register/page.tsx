@@ -21,8 +21,10 @@ export default function RegisterPage() {
         setIsLoading(true);
 
         try {
-            // Force relative path in browser production
-            const apiUrl = typeof window !== 'undefined' ? '' : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000');
+            // Determine API URL: Use localhost:5000 for local dev, or relative path for production
+            const apiUrl = process.env.NODE_ENV === 'development'
+                ? 'http://localhost:5000'
+                : (typeof window !== 'undefined' ? '' : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'));
             const res = await fetch(`${apiUrl}/api/auth/register`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

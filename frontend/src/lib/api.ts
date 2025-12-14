@@ -1,7 +1,13 @@
 import axios from 'axios';
 
+const getBaseUrl = () => {
+    if (typeof window === 'undefined') return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+    if (process.env.NODE_ENV === 'development') return 'http://localhost:5000/api';
+    return '/api';
+};
+
 const api = axios.create({
-    baseURL: typeof window !== 'undefined' ? '/api' : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'),
+    baseURL: getBaseUrl(),
     withCredentials: true,
     headers: {
         'Content-Type': 'application/json',
@@ -28,8 +34,13 @@ api.interceptors.response.use(
             originalRequest._retry = true;
 
             try {
-                // Attempt Refresh (use relative path in browser)
-                const refreshUrl = typeof window !== 'undefined' ? '/api/auth/refresh' : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/auth/refresh`;
+                // Attempt Refresh
+                const refreshBase = typeof window !== 'undefined' && process.env.NODE_ENV === 'development'
+                    ? 'http://localhost:5000'
+                    : '';
+                const refreshUrl = typeof window !== 'undefined' && process.env.NODE_ENV !== 'development'
+                    ? '/api/auth/refresh'
+                    : `${refreshBase}/api/auth/refresh`;
                 const { data } = await axios.post(refreshUrl, {}, {
                     withCredentials: true
                 });

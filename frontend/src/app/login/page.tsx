@@ -17,8 +17,11 @@ export default function LoginPage() {
         setIsLoading(true);
 
         try {
-            // Force relative path in browser production to handle monorepo correctly
-            const apiUrl = typeof window !== 'undefined' ? '' : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000');
+            // Determine API URL: Use localhost:5000 for local dev, or relative path for production
+            const apiUrl = process.env.NODE_ENV === 'development'
+                ? 'http://localhost:5000'
+                : (typeof window !== 'undefined' ? '' : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'));
+
             const res = await fetch(`${apiUrl}/api/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
