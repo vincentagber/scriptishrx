@@ -31,20 +31,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 const token = localStorage.getItem('token');
                 if (!token) return;
 
-                const response = await fetch('http://localhost:5000/api/settings', {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-
-                if (!response.ok) return;
-
-                const contentType = response.headers.get('content-type');
-                if (!contentType?.includes('application/json')) {
-                    console.warn('Expected JSON from /api/settings');
-                    return;
-                }
-
-                const json = await response.json();
-                setUser(json);
+                // Use configured API client
+                const { data } = await import('@/lib/api').then(m => m.default.get('/settings'));
+                setUser(data);
             } catch (err) {
                 console.error('User fetch failed:', err);
             }
@@ -324,11 +313,12 @@ function Avatar({ url, name, size = 'md' }: { url?: string; name?: string; size?
         <div className={`${dims} rounded-full overflow-hidden ring-4 ring-gray-50 flex items-center justify-center font-bold bg-white text-blue-600 shadow-sm border border-gray-100`}>
             {url ? (
                 <img
-                    src={url.startsWith('http') ? url : `http://localhost:5000${url}`}
+                    src={url.startsWith('http') ? url : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}${url}`}
                     className="w-full h-full object-cover"
+                    alt={name || 'User'}
                 />
             ) : (
-                <span>{name?.charAt(0)}</span>
+                <span>{name?.charAt(0).toUpperCase()}</span>
             )}
         </div>
     );

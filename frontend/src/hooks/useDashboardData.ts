@@ -7,7 +7,9 @@ export function useDashboardStats() {
         queryFn: async () => {
             const { data } = await api.get('/clients/stats');
             return data;
-        }
+        },
+        refetchInterval: 10000, // Poll every 10 seconds for realtime updates
+        refetchOnWindowFocus: true
     });
 }
 
