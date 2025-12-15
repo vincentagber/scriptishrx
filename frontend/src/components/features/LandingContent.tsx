@@ -305,7 +305,7 @@ export const AppBenefits = () => (
                     { title: "User Friendly", desc: "Designed for simplicity and ease of use.", bg: "bg-purple-50", icon: Users, iconColor: "text-purple-600" },
                     { title: "Enterprise Security", desc: "SOC2 Type II compliant & encrypted data storage.", bg: "bg-orange-50", icon: Shield, iconColor: "text-orange-600" },
                     { title: "24/7 Support", desc: "Dedicated support team always ready to help.", bg: "bg-green-50", icon: Zap, iconColor: "text-green-600" },
-                    { title: "White Labeling", desc: "Customize the platform with your own brand.", bg: "bg-pink-50", icon: Smartphone, iconColor: "text-pink-600" }
+                    { title: "Mobile Optimized", desc: "Manage your business from anywhere, on any device.", bg: "bg-pink-50", icon: Smartphone, iconColor: "text-pink-600" }
                 ].map((item, i) => (
                     <div key={i} className={cn("p-8 rounded-3xl transition-all hover:scale-105 cursor-pointer", item.bg)}>
                         <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-sm mx-auto mb-6">
@@ -323,15 +323,36 @@ export const AppBenefits = () => (
 // --- FAQ ---
 export const FAQ = () => {
     const [openIndex, setOpenIndex] = useState<number | null>(0);
+    const [showSupport, setShowSupport] = useState(false);
     const faqs = [
         { q: "How long does the free trial last?", a: "Unless you cancel, the free trial lasts for 14 days. You can access all premium business features during this period." },
-        { q: "Can I customize the branding?", a: "Yes, our White Labeling feature allows you to apply your own logo and colors to the client-facing portal." },
+        { q: "Is the platform mobile friendly?", a: "Yes, ScriptishRx is fully optimized for all devices, so you can manage your business from anywhere." },
         { q: "Is my business data secure?", a: "Absolutely. We are SOC2 Type II compliant and use enterprise-grade encryption to ensure your data is always safe." },
         { q: "Do you offer priority support?", a: "Yes, our enterprise plans include a dedicated account manager and 24/7 priority support." }
     ];
 
     return (
         <section className="py-16 md:py-24 bg-slate-50">
+            {showSupport && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setShowSupport(false)}>
+                    <div className="bg-white rounded-3xl w-full max-w-md p-8 shadow-2xl relative animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+                        <button onClick={() => setShowSupport(false)} className="absolute top-4 right-4 p-2 hover:bg-slate-100 rounded-full transition-colors">
+                            <X className="w-5 h-5 text-slate-400" />
+                        </button>
+                        <h3 className="text-2xl font-bold text-slate-900 mb-6">Contact Support</h3>
+                        <div className="space-y-4">
+                            <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                                <p className="text-xs text-slate-500 uppercase font-bold tracking-wider mb-1">General Inquiries</p>
+                                <a href="mailto:info@scriptishrx.com" className="text-lg font-medium text-primary-start hover:underline">info@scriptishrx.com</a>
+                            </div>
+                            <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                                <p className="text-xs text-slate-500 uppercase font-bold tracking-wider mb-1">Technical Support</p>
+                                <a href="mailto:support@scriptishrx.com" className="text-lg font-medium text-primary-start hover:underline">support@scriptishrx.com</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
             <div className="container mx-auto px-4">
                 <div className="flex flex-col lg:flex-row gap-12 lg:gap-16 items-start lg:items-center">
                     <div className="w-full lg:w-1/2 space-y-8">
@@ -366,7 +387,7 @@ export const FAQ = () => {
                             </div>
                             <h3 className="text-xl font-bold text-slate-900 relative z-10">Still have questions?</h3>
                             <p className="text-slate-500 relative z-10">Contact our support team for specialized assistance.</p>
-                            <Button variant="outline" className="relative z-10">Contact Support</Button>
+                            <Button variant="outline" className="relative z-10" onClick={() => setShowSupport(true)}>Contact Support</Button>
                         </div>
                     </div>
                 </div>
