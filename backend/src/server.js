@@ -19,6 +19,12 @@ const http = require('http');
 // Passenger often passes the port/socket as a string via process.env.PORT
 const PORT = process.env.PORT || 5000;
 
+// Force Mock Mode if requested or not defined (User Request)
+if (!process.env.MOCK_EXTERNAL_SERVICES) {
+    process.env.MOCK_EXTERNAL_SERVICES = 'true';
+    console.log('ℹ️  MOCK_EXTERNAL_SERVICES defaulted to true');
+}
+
 // Validate critical env vars (Only enforced in Production to allow easier local dev)
 if (!process.env.JWT_SECRET && process.env.NODE_ENV === 'production') {
     console.error('FATAL: JWT_SECRET is not defined in production environment.');
