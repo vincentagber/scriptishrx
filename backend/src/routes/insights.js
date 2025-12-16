@@ -20,42 +20,8 @@ const calculateRevenue = (bookings) => {
 
 // GET /api/insights - Aggregate Real Data (with Mock Fallback)
 router.get('/', async (req, res) => {
-    // Check for Mock Mode
-    if (process.env.MOCK_EXTERNAL_SERVICES === 'true') {
-        return res.json({
-            metrics: {
-                totalRevenue: 12500,
-                retentionRate: 85,
-                aiEfficiency: 94,
-                convRate: 24,
-                outbound: {
-                    totalCampaigns: 3,
-                    totalSent: 1540,
-                    avgOpenRate: 42
-                }
-            },
-            revenueChart: [
-                { month: 'Jan', revenue: 4000 },
-                { month: 'Feb', revenue: 3000 },
-                { month: 'Mar', revenue: 2000 },
-                { month: 'Apr', revenue: 2780 },
-                { month: 'May', revenue: 1890 },
-                { month: 'Jun', revenue: 2390 },
-                { month: 'Jul', revenue: 3490 }
-            ],
-            behaviorChart: [
-                { name: 'Mon', Visits: 4000, Bookings: 2400 },
-                { name: 'Tue', Visits: 3000, Bookings: 1398 },
-                { name: 'Wed', Visits: 2000, Bookings: 9800 },
-                { name: 'Thu', Visits: 2780, Bookings: 3908 },
-                { name: 'Fri', Visits: 1890, Bookings: 4800 },
-                { name: 'Sat', Visits: 2390, Bookings: 3800 },
-                { name: 'Sun', Visits: 3490, Bookings: 4300 }
-            ],
-            aiRecommendation: "Traffic is highest on Wednesday. Consider adding extra staff or extending hours. To boost Tue, consider a flash sale or 'Happy Hour' promotion.",
-            mockMode: true
-        });
-    }
+    // Note: Removed forced mock override to allow real-time DB data as requested.
+    // If DB is empty, it will largely return zeros, which is correct for a "fresh" real-time view.
 
     try {
         const tenantId = req.user.tenantId;
