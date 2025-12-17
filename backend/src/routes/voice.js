@@ -6,6 +6,7 @@ const voiceCakeService = require('../services/voiceCakeService');
 const { authenticateToken } = require('../middleware/auth');
 const { checkPermission, verifyTenantAccess } = require('../middleware/permissions');
 const { checkSubscriptionAccess, checkFeature } = require('../middleware/subscription');
+const { voiceLimiter } = require('../middleware/rateLimiting');
 
 // Check if running in mock mode
 const isMockMode = voiceCakeService.isMockMode();
@@ -60,6 +61,7 @@ router.get('/logs',
  * POST /api/voice/outbound - Initiate outbound call
  */
 router.post('/outbound',
+    voiceLimiter,
     authenticateToken,
     verifyTenantAccess,
     checkSubscriptionAccess,
@@ -147,9 +149,10 @@ router.get('/status/:callId',
     async (req, res) => {
         try {
             const { callId } = req.params;
+            const tenantId = req.scopedTenantId;
 
-            // Get status from voice service
-            const status = voiceService.getCallStatus(callId);
+            // SECURITY FIX: Pass tenantId to enforce isolation
+            const status = voiceService.getCallStatus(callId, tenantId);
 
             if (status) {
                 res.json({

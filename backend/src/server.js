@@ -19,27 +19,35 @@ const http = require('http');
 // Passenger often passes the port/socket as a string via process.env.PORT
 const PORT = process.env.PORT || 5000;
 
-// Force Mock Mode if requested or not defined (User Request)
-if (!process.env.MOCK_EXTERNAL_SERVICES) {
-    process.env.MOCK_EXTERNAL_SERVICES = 'true';
-    console.log('ℹ️  MOCK_EXTERNAL_SERVICES defaulted to true');
-}
-
-// Validate critical env vars (Only enforced in Production to allow easier local dev)
+// Validate critical env vars
 if (!process.env.JWT_SECRET && process.env.NODE_ENV === 'production') {
-    console.error('FATAL: JWT_SECRET is not defined in production environment.');
-    // In cPanel, exiting might just cause a restart loop. 
-    // Better to log heavily. Passenger logs to stderr.
+    console.error('🔴 FATAL: JWT_SECRET is not defined in production environment.');
+    process.exit(1);
 }
 
-// Additional environment variable warnings
-if (!process.env.VOICECAKE_API_KEY) {
-    console.warn('Warning: VOICECAKE_API_KEY not set - VoiceCake features will run in mock mode');
-}
-
+// PRODUCTION REQUIREMENT: OpenAI API key
 if (!process.env.OPENAI_API_KEY) {
-    console.warn('Warning: OPENAI_API_KEY not set - Voice AI features may not work');
+    console.error('🔴 CRITICAL: OPENAI_API_KEY is not set!');
+    console.error('AI features will NOT work without this.');
+    console.error('Set OPENAI_API_KEY in your .env file.');
+
+    if (process.env.NODE_ENV === 'production') {
+        console.error('🔴 FATAL: Cannot run in production without OpenAI API key.');
+        process.exit(1);
+    }
 }
+
+// Validate MOCK_EXTERNAL_SERVICES is disabled for production
+if (process.env.NODE_ENV === 'production' && process.env.MOCK_EXTERNAL_SERVICES === 'true') {
+    console.error('🔴 FATAL: MOCK_EXTERNAL_SERVICES must be false in production!');
+    process.exit(1);
+}
+
+// Warn about VoiceCake (optional)
+if (!process.env.VOICECAKE_API_KEY) {
+    console.warn('⚠️  Warning: VOICECAKE_API_KEY not set - VoiceCake features will be unavailable');
+}
+
 
 const server = http.createServer(app);
 

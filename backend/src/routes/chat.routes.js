@@ -1,16 +1,18 @@
 // backend/src/routes/chat.routes.js
+/**
+ * Chat Routes - Production OpenAI Integration
+ * NO MOCK MODE - Real OpenAI API only
+ */
+
 const express = require('express');
 const router = express.Router();
 const chatService = require('../services/chatService');
-
-const isMockMode = process.env.MOCK_EXTERNAL_SERVICES === 'true' || 
-                   (!process.env.VOICECAKE_API_KEY && !process.env.OPENAI_API_KEY);
 
 // Optional authentication middleware
 const optionalAuth = (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
-    
+
     if (token) {
         try {
             const jwt = require('jsonwebtoken');
@@ -28,19 +30,13 @@ const optionalAuth = (req, res, next) => {
  */
 router.get('/status', optionalAuth, (req, res) => {
     const providerInfo = chatService.getProviderInfo();
-    
+
     res.json({
         success: true,
-        status: 'online',
-        mockMode: isMockMode,
+        status: providerInfo.configured ? 'online' : 'not_configured',
         provider: providerInfo.provider,
         timestamp: new Date().toISOString(),
-        capabilities: providerInfo.capabilities,
-        aiProviders: {
-            voicecake: providerInfo.hasVoiceCake,
-            openai: providerInfo.hasOpenAI,
-            active: providerInfo.provider
-        }
+        capabilities: providerInfo.capabilities
     });
 });
 
@@ -51,7 +47,7 @@ router.get('/history', optionalAuth, async (req, res) => {
     try {
         const tenantId = req.user?.tenantId || 'default';
         const messages = await chatService.getChatHistory(tenantId);
-        
+
         res.json({
             success: true,
             messages: messages,
@@ -73,7 +69,7 @@ router.get('/history', optionalAuth, async (req, res) => {
 router.post('/message', optionalAuth, async (req, res) => {
     try {
         const { message, tenantId } = req.body;
-        
+
         if (!message || typeof message !== 'string' || !message.trim()) {
             return res.status(400).json({
                 success: false,
@@ -82,24 +78,23 @@ router.post('/message', optionalAuth, async (req, res) => {
         }
 
         const userTenantId = tenantId || req.user?.tenantId || 'default';
-        
+
         console.log(`[Chat] Processing message for tenant: ${userTenantId}`);
-        
-        // Get AI response
+
+        // Get AI response from OpenAI
         const result = await chatService.processMessage(message.trim(), userTenantId);
-        
+
         if (result.success) {
             res.json({
                 success: true,
                 response: result.response,
-                audioUrl: result.audioUrl,
-                metadata: result.metadata,
-                mockMode: isMockMode
+                metadata: result.metadata
             });
         } else {
             res.status(400).json({
                 success: false,
-                error: result.error || 'Failed to process message'
+                error: result.error || 'Failed to process message',
+                code: result.code
             });
         }
     } catch (error) {
@@ -113,12 +108,12 @@ router.post('/message', optionalAuth, async (req, res) => {
 });
 
 /**
- * POST /api/chat/voice - Process voice input
+ * POST /api/chat/voice - Process voice input with OpenAI Whisper
  */
 router.post('/voice', optionalAuth, async (req, res) => {
     try {
         const { audioData, tenantId } = req.body;
-        
+
         if (!audioData) {
             return res.status(400).json({
                 success: false,
@@ -127,24 +122,25 @@ router.post('/voice', optionalAuth, async (req, res) => {
         }
 
         const userTenantId = tenantId || req.user?.tenantId || 'default';
-        
+
         console.log(`[Chat] Processing voice input for tenant: ${userTenantId}`);
-        
-        // Process voice input
+
+        // Process voice input with OpenAI Whisper
         const result = await chatService.processVoiceInput(audioData, userTenantId);
-        
+
         if (result.success) {
             res.json({
                 success: true,
                 transcript: result.transcript,
                 response: result.response,
-                audioUrl: result.audioUrl,
-                provider: result.provider
+                provider: result.provider,
+                metadata: result.metadata
             });
         } else {
             res.status(400).json({
                 success: false,
-                error: result.error || 'Failed to process voice input'
+                error: result.error || 'Failed to process voice input',
+                code: result.code
             });
         }
     } catch (error) {
@@ -164,7 +160,7 @@ router.delete('/history', optionalAuth, async (req, res) => {
     try {
         const tenantId = req.user?.tenantId || 'default';
         await chatService.clearChatHistory(tenantId);
-        
+
         res.json({
             success: true,
             message: 'Chat history cleared'

@@ -1,7 +1,7 @@
 // backend/src/routes/organization.js
 /**
  * Organization Management Routes
- * Handles: Invites, Team Management, Organization Settings
+ * Handles team invites, member management, and organization settings
  */
 
 const express = require('express');
@@ -10,6 +10,7 @@ const prisma = require('../lib/prisma');
 const crypto = require('crypto');
 const { authenticateToken } = require('../middleware/auth');
 const { checkPermission, requireOwnerOrAdmin, verifyTenantAccess } = require('../middleware/permissions');
+const { inviteLimiter, inviteVerifyLimiter } = require('../middleware/rateLimiting');
 
 // ========== ORGANIZATION INVITES ==========
 
@@ -18,6 +19,7 @@ const { checkPermission, requireOwnerOrAdmin, verifyTenantAccess } = require('..
  * Invite a user to join the organization
  */
 router.post('/invite',
+    inviteLimiter,
     authenticateToken,
     checkPermission('users', 'invite'),
     async (req, res) => {
@@ -216,7 +218,7 @@ router.delete('/invite/:inviteId',
  * GET /api/organization/invite/verify/:token
  * Verify an invite token (public route for registration)
  */
-router.get('/invite/verify/:token', async (req, res) => {
+router.get('/invite/verify/:token', inviteVerifyLimiter, async (req, res) => {
     try {
         const { token } = req.params;
 
@@ -227,27 +229,22 @@ router.get('/invite/verify/:token', async (req, res) => {
             }
         });
 
-        if (!invite) {
-            return res.status(404).json({
-                success: false,
-                error: 'Invalid invite token'
-            });
-        }
+        // SECURITY FIX: Unified error response for all failure cases
+        // This prevents token enumeration attacks
+        const isValid = invite &&
+            !invite.acceptedAt &&
+            new Date() < new Date(invite.expiresAt);
 
-        if (invite.acceptedAt) {
+        if (!isValid) {
+            // SAME response for: invalid token, expired token, or already accepted
             return res.status(400).json({
                 success: false,
-                error: 'This invite has already been accepted'
+                error: 'Invalid or expired invite link',
+                code: 'INVITE_INVALID'
             });
         }
 
-        if (new Date() > invite.expiresAt) {
-            return res.status(400).json({
-                success: false,
-                error: 'This invite has expired'
-            });
-        }
-
+        // Only reveal organization details if token is fully valid
         res.json({
             success: true,
             invite: {

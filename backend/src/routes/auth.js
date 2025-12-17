@@ -6,6 +6,7 @@ const prisma = require('../lib/prisma');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { registerSchema, loginSchema } = require('../schemas/validation');
+const { authLimiter, registerLimiter } = require('../middleware/rateLimiting');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const REFRESH_SECRET = process.env.REFRESH_SECRET || process.env.JWT_SECRET;
@@ -45,7 +46,7 @@ const generateTokens = (user) => {
 };
 
 // Register — supports both new organization creation and invite-based join
-router.post('/register', async (req, res) => {
+router.post('/register', registerLimiter, async (req, res) => {
     try {
         const validated = registerSchema.parse(req.body);
         const { email, password, name, companyName, location, timezone, inviteToken } = validated;
@@ -166,7 +167,7 @@ router.post('/register', async (req, res) => {
 });
 
 // Login — NOW WORKS WITH VOICECAKE
-router.post('/login', async (req, res) => {
+router.post('/login', authLimiter, async (req, res) => {
     try {
         const result = loginSchema.safeParse(req.body);
         if (!result.success) return res.status(400).json({ error: result.error.errors[0].message });

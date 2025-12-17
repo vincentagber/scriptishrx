@@ -5,6 +5,8 @@ dist/
 .next/
 out/
 
+# Agent documentation (internal use only)
+.agent/
 
 # Ignore environment variables
 .env

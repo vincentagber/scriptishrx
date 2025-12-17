@@ -15,18 +15,28 @@ function getCallLogs(tenantId = null) {
 }
 
 /**
- * Get call status by ID
+ * Get call status by ID (with tenant isolation)
+ * SECURITY FIX: Added tenantId parameter to prevent cross-tenant access
  */
-function getCallStatus(callId) {
-    const log = callLogs.find(log => log.callId === callId);
+function getCallStatus(callId, tenantId = null) {
+    const log = callLogs.find(log => {
+        if (tenantId) {
+            // Filter by both callId AND tenantId
+            return log.callId === callId && log.tenantId === tenantId;
+        }
+        // Only for super admin or internal use
+        return log.callId === callId;
+    });
+
     if (!log) return null;
-    
+
     return {
         callId: log.callId,
         status: log.status,
         phoneNumber: log.phoneNumber,
         duration: log.duration,
-        timestamp: log.timestamp
+        timestamp: log.timestamp,
+        tenantId: log.tenantId
     };
 }
 
@@ -44,7 +54,7 @@ function addCallLog(callData) {
         timestamp: new Date().toISOString(),
         ...callData
     };
-    
+
     callLogs.push(log);
     return log;
 }
@@ -56,7 +66,7 @@ async function initiateOutboundCall(phoneNumber, tenantId, customData = {}) {
     try {
         // Get the linked agent for this tenant
         const agent = await voiceCakeService.getTenantAgent(tenantId);
-        
+
         if (!agent && !voiceCakeService.isMockMode()) {
             return {
                 success: false,
@@ -108,29 +118,29 @@ async function initiateOutboundCall(phoneNumber, tenantId, customData = {}) {
  */
 function handleConnection(ws, req) {
     console.log('[Voice] WebSocket connection established');
-    
+
     ws.on('message', (message) => {
         try {
             const data = JSON.parse(message);
             console.log('[Voice] Received message:', data.type);
-            
+
             // Handle different message types
             switch (data.type) {
                 case 'start':
-                    ws.send(JSON.stringify({ 
-                        type: 'started', 
-                        callId: `ws_call_${Date.now()}` 
+                    ws.send(JSON.stringify({
+                        type: 'started',
+                        callId: `ws_call_${Date.now()}`
                     }));
                     break;
-                    
+
                 case 'audio':
                     // Handle audio data
                     break;
-                    
+
                 case 'stop':
                     ws.send(JSON.stringify({ type: 'stopped' }));
                     break;
-                    
+
                 default:
                     console.warn('[Voice] Unknown message type:', data.type);
             }
@@ -138,11 +148,11 @@ function handleConnection(ws, req) {
             console.error('[Voice] Error handling message:', error);
         }
     });
-    
+
     ws.on('close', () => {
         console.log('[Voice] WebSocket connection closed');
     });
-    
+
     ws.on('error', (error) => {
         console.error('[Voice] WebSocket error:', error);
     });
