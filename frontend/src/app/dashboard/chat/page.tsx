@@ -6,7 +6,9 @@ import { Bot, Save, Sparkles, MessageSquare, Plus, Trash2, HelpCircle, Book, Set
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const API_URL = typeof window !== 'undefined' && process.env.NODE_ENV === 'development'
+    ? 'http://localhost:5000'
+    : (typeof window !== 'undefined' ? '' : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'));
 
 interface FAQ {
     question: string;
