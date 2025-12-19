@@ -34,28 +34,36 @@ class NotificationService {
                 console.log(`📧 Email sent to ${to}`);
             } catch (error) {
                 console.error(`❌ Email Failed (${to}):`, error.message);
+                if (error.response && error.response.body) {
+                    console.error('   Reason:', JSON.stringify(error.response.body, null, 2));
+                }
             }
         } else {
             console.log(`[MOCK EMAIL] To: ${to} | Subject: ${subject} | Body: ${html.substring(0, 50)}...`);
         }
     }
 
-    async sendSMS(to, body) {
+    async sendSMS(to, body, tenantId = null) {
         if (!to) return;
 
-        if (this.smsProvider && this.twilioPhone) {
-            try {
+        try {
+            if (tenantId) {
+                // Use Tenant-Specific Twilio Service
+                const twilioService = require('./twilioService'); // Lazy load
+                await twilioService.sendSms(tenantId, to, body);
+            } else if (this.smsProvider && this.twilioPhone) {
+                // Fallback to Global Env Config
                 await this.smsProvider.messages.create({
                     body,
                     from: this.twilioPhone,
                     to
                 });
-                console.log(`📱 SMS sent to ${to}`);
-            } catch (error) {
-                console.error(`❌ SMS Failed (${to}):`, error.message);
+                console.log(`📱 SMS sent to ${to} (Global Provider)`);
+            } else {
+                console.log(`[MOCK SMS] To: ${to} | Body: ${body}`);
             }
-        } else {
-            console.log(`[MOCK SMS] To: ${to} | Body: ${body}`);
+        } catch (error) {
+            console.error(`❌ SMS Failed (${to}):`, error.message);
         }
     }
 }

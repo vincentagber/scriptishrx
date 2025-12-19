@@ -24,8 +24,12 @@ model Tenant {
   customSystemPrompt String?
   integrations     String?
 
-  // THIS IS THE ONLY LINE ADDED — REQUIRED FOR VOICECAKE
-  voiceCakeAgentId String?
+  // Communication & AI Configuration
+  twilioConfig     Json?   // Stores: { accountSid, authToken, phoneNumber, voiceSettings: {...} }
+  aiConfig         Json?   // Stores: { model, temperature, systemPrompt, voiceId, welcomeMessage }
+  
+  // Deprecated (Migrate to aiConfig)
+  voiceCakeAgentId String? @ignore
 
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt

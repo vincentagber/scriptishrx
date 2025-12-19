@@ -250,10 +250,14 @@ app.use('/api/notifications', notificationsRouter);
 app.use('/api/payments', paymentsRouter);
 app.use('/api/upload', uploadRouter);
 app.use('/api/voice', voiceRouter);
-app.use('/api/voicecake', voiceCakeRouter);
-app.use('/webhooks', webhooksRouter);
+// app.use('/api/voicecake', voiceCakeRouter); // Deprecated
 app.use('/api/marketing', marketingRouter);
 app.use('/api/organization', organizationRouter);
+
+// Twilio Webhooks
+const twilioRouter = require('./routes/twilio');
+app.use('/api/twilio', twilioRouter);
+app.use('/webhooks', webhooksRouter); // Existing webhooks (Stripe?)
 
 const os = require('os');
 

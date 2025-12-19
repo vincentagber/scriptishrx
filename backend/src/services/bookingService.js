@@ -51,7 +51,8 @@ class BookingService {
             if (booking.client.phone) {
                 await notificationService.sendSMS(
                     booking.client.phone,
-                    `[${booking.tenant.name}] Appointment confirmed for ${booking.date.toLocaleDateString()} @ ${booking.date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.`
+                    `[${booking.tenant.name}] Appointment confirmed for ${booking.date.toLocaleDateString()} @ ${booking.date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.`,
+                    tenantId
                 );
             }
         }
@@ -107,7 +108,8 @@ class BookingService {
             if (updatedBooking.client.phone) {
                 await notificationService.sendSMS(
                     updatedBooking.client.phone,
-                    `[${updatedBooking.tenant.name}] Booking status updated: ${updatedBooking.status}.`
+                    `[${updatedBooking.tenant.name}] Booking status updated: ${updatedBooking.status}.`,
+                    tenantId
                 );
             }
         }

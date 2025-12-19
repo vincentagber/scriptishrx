@@ -75,8 +75,15 @@ async function callOpenAI(message, tenantId) {
             where: { id: tenantId }
         });
 
-        // Use custom system prompt or default
-        const systemPrompt = tenant?.customSystemPrompt || generateDefaultPrompt(tenant);
+        // Use custom system prompt from AI Config (Primary) or legacy field
+        const aiConfig = tenant?.aiConfig || {};
+        let systemPrompt = aiConfig.systemPrompt || tenant?.customSystemPrompt || generateDefaultPrompt(tenant);
+
+        // Append Tenant FAQs if available (Basic RAG)
+        if (aiConfig.faqs && Array.isArray(aiConfig.faqs) && aiConfig.faqs.length > 0) {
+            const faqSection = `\n\nHere is your knowledge base for ${tenant.name || 'this organization'}:\n${aiConfig.faqs.map(f => `- Q: ${f.question}\n  A: ${f.answer}`).join('\n')}`;
+            systemPrompt += faqSection;
+        }
 
         // Get conversation context
         const context = await getChatHistory(tenantId);
@@ -107,10 +114,10 @@ async function callOpenAI(message, tenantId) {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                model: process.env.OPENAI_MODEL || 'gpt-3.5-turbo',
+                model: aiConfig.model || process.env.OPENAI_MODEL || 'gpt-3.5-turbo',
                 messages: openaiMessages,
-                max_tokens: 500,
-                temperature: 0.7
+                max_tokens: aiConfig.maxTokens || 500,
+                temperature: aiConfig.temperature || 0.7
             })
         });
 

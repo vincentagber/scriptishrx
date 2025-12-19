@@ -1,13 +1,15 @@
 // backend/src/services/voiceService.js
-const voiceCakeService = require('./voiceCakeService');
+const twilioService = require('./twilioService');
+const prisma = require('../lib/prisma');
 
-// In-memory storage for call logs (replace with database in production)
+// In-memory storage for call logs (TODO: Move to Database 'CommunicationLogs')
 const callLogs = [];
 
 /**
  * Get call logs for a tenant
  */
 function getCallLogs(tenantId = null) {
+    // In production, query the database
     if (tenantId) {
         return callLogs.filter(log => log.tenantId === tenantId);
     }
@@ -16,15 +18,12 @@ function getCallLogs(tenantId = null) {
 
 /**
  * Get call status by ID (with tenant isolation)
- * SECURITY FIX: Added tenantId parameter to prevent cross-tenant access
  */
 function getCallStatus(callId, tenantId = null) {
     const log = callLogs.find(log => {
         if (tenantId) {
-            // Filter by both callId AND tenantId
             return log.callId === callId && log.tenantId === tenantId;
         }
-        // Only for super admin or internal use
         return log.callId === callId;
     });
 
@@ -32,7 +31,7 @@ function getCallStatus(callId, tenantId = null) {
 
     return {
         callId: log.callId,
-        status: log.status,
+        status: log.status, // In real-time, query Twilio API via twilioService
         phoneNumber: log.phoneNumber,
         duration: log.duration,
         timestamp: log.timestamp,
@@ -41,68 +40,45 @@ function getCallStatus(callId, tenantId = null) {
 }
 
 /**
- * Add a call log entry
- */
-function addCallLog(callData) {
-    const log = {
-        id: `log_${Date.now()}`,
-        callId: callData.callId,
-        tenantId: callData.tenantId,
-        phoneNumber: callData.phoneNumber,
-        status: callData.status || 'initiated',
-        duration: callData.duration || 0,
-        timestamp: new Date().toISOString(),
-        ...callData
-    };
-
-    callLogs.push(log);
-    return log;
-}
-
-/**
- * Initiate outbound call
+ * Initiate outbound call via Twilio
  */
 async function initiateOutboundCall(phoneNumber, tenantId, customData = {}) {
     try {
-        // Get the linked agent for this tenant
-        const agent = await voiceCakeService.getTenantAgent(tenantId);
+        // Fetch Tenant configuration for AI Script
+        const tenant = await prisma.tenant.findUnique({
+            where: { id: tenantId },
+            select: { aiConfig: true, name: true }
+        });
 
-        if (!agent && !voiceCakeService.isMockMode()) {
-            return {
-                success: false,
-                error: 'No voice agent configured',
-                message: 'Please configure your voice agent before making calls.'
-            };
-        }
+        // Determine script/prompt
+        const aiConfig = tenant?.aiConfig || {};
+        const script = customData.script || aiConfig.welcomeMessage || `Hello, this is a call from ${tenant?.name || 'ScriptishRx'}.`;
 
-        const agentId = agent?.id || customData.agentId || 'agent_001';
+        console.log(`[VoiceService] Initiating Twilio call for Tenant ${tenantId} to ${phoneNumber}`);
 
-        // Initiate call via VoiceCake
-        const result = await voiceCakeService.initiateOutboundCall(
-            phoneNumber,
-            agentId,
-            customData
-        );
+        const call = await twilioService.makeCall(tenantId, phoneNumber, script);
 
-        // Add to call logs
-        const logEntry = addCallLog({
-            callId: result.callId,
+        const logEntry = {
+            id: `log_${Date.now()}`,
+            callId: call.sid,
             tenantId,
             phoneNumber,
-            status: result.status || 'initiated',
-            agentId,
-            customData
-        });
+            status: call.status,
+            provider: 'twilio',
+            timestamp: new Date().toISOString(),
+            ...customData
+        };
+        callLogs.push(logEntry);
 
         return {
             success: true,
-            message: 'Call initiated successfully',
-            callId: result.callId,
-            status: result.status,
-            phoneNumber: phoneNumber,
-            provider: 'voicecake',
-            logId: logEntry.id
+            message: 'Call initiated successfully via Twilio',
+            callId: call.sid,
+            status: call.status,
+            phoneNumber,
+            provider: 'twilio'
         };
+
     } catch (error) {
         console.error('Voice service error:', error);
         return {
@@ -113,55 +89,8 @@ async function initiateOutboundCall(phoneNumber, tenantId, customData = {}) {
     }
 }
 
-/**
- * Handle WebSocket connection for real-time voice
- */
-function handleConnection(ws, req) {
-    console.log('[Voice] WebSocket connection established');
-
-    ws.on('message', (message) => {
-        try {
-            const data = JSON.parse(message);
-            console.log('[Voice] Received message:', data.type);
-
-            // Handle different message types
-            switch (data.type) {
-                case 'start':
-                    ws.send(JSON.stringify({
-                        type: 'started',
-                        callId: `ws_call_${Date.now()}`
-                    }));
-                    break;
-
-                case 'audio':
-                    // Handle audio data
-                    break;
-
-                case 'stop':
-                    ws.send(JSON.stringify({ type: 'stopped' }));
-                    break;
-
-                default:
-                    console.warn('[Voice] Unknown message type:', data.type);
-            }
-        } catch (error) {
-            console.error('[Voice] Error handling message:', error);
-        }
-    });
-
-    ws.on('close', () => {
-        console.log('[Voice] WebSocket connection closed');
-    });
-
-    ws.on('error', (error) => {
-        console.error('[Voice] WebSocket error:', error);
-    });
-}
-
 module.exports = {
     getCallLogs,
     getCallStatus,
-    addCallLog,
-    initiateOutboundCall,
-    handleConnection
+    initiateOutboundCall
 };

@@ -2,18 +2,14 @@
 const express = require('express');
 const router = express.Router();
 const voiceService = require('../services/voiceService');
-const voiceCakeService = require('../services/voiceCakeService');
+const prisma = require('../lib/prisma'); // Access DB directly for resource helpers
 const { authenticateToken } = require('../middleware/auth');
 const { checkPermission, verifyTenantAccess } = require('../middleware/permissions');
 const { checkSubscriptionAccess, checkFeature } = require('../middleware/subscription');
 const { voiceLimiter } = require('../middleware/rateLimiting');
 
-// Check if running in mock mode
-const isMockMode = voiceCakeService.isMockMode();
-
-if (isMockMode) {
-    console.log('⚠️  Voice routes running in MOCK MODE');
-}
+// Mock Mode is now determined by Twilio Config presence (real) vs absence (mock/dev)
+const isMockMode = process.env.MOCK_EXTERNAL_SERVICES === 'true';
 
 /**
  * GET /api/voice/health - Health check endpoint (public)
@@ -22,6 +18,7 @@ router.get('/health', (req, res) => {
     res.json({
         success: true,
         service: 'voice',
+        provider: 'twilio',
         status: 'operational',
         mockMode: isMockMode,
         timestamp: new Date().toISOString()
@@ -43,8 +40,7 @@ router.get('/logs',
             res.json({
                 success: true,
                 logs: logs,
-                total: logs.length,
-                mockMode: isMockMode
+                total: logs.length
             });
         } catch (error) {
             console.error('Error fetching voice logs:', error);
@@ -69,191 +65,131 @@ router.post('/outbound',
     checkPermission('voice_agents', 'configure'),
     async (req, res) => {
         try {
-            // Accept both 'to' and 'phoneNumber' parameters
             const phoneNumber = req.body.to || req.body.phoneNumber;
-            const { agentId, campaign, context, customData } = req.body;
+            const { customData } = req.body;
 
-            // Validate phone number
-            if (!phoneNumber || typeof phoneNumber !== 'string' || !phoneNumber.trim()) {
-                return res.status(400).json({
-                    success: false,
-                    error: 'Phone number is required'
-                });
-            }
-
-            const cleanPhone = phoneNumber.trim();
-
-            // Validate phone format
-            const phoneRegex = /^\+?[1-9]\d{1,14}$/;
-            const cleanedForValidation = cleanPhone.replace(/[\s()-]/g, '');
-
-            if (!phoneRegex.test(cleanedForValidation)) {
-                return res.status(400).json({
-                    success: false,
-                    error: 'Invalid phone number format. Use international format (e.g., +1234567890)'
-                });
+            if (!phoneNumber) {
+                return res.status(400).json({ success: false, error: 'Phone number is required' });
             }
 
             const tenantId = req.scopedTenantId;
 
-            console.log(`[Voice] Initiating outbound call to ${cleanPhone} for tenant ${tenantId}...`);
+            // Clean phone number
+            const cleanPhone = phoneNumber.replace(/[\s()-]/g, '');
 
-            // Call voice service
+            console.log(`[Voice] Initiating Twilio call to ${cleanPhone} for tenant ${tenantId}...`);
+
             const result = await voiceService.initiateOutboundCall(
                 cleanPhone,
                 tenantId,
-                {
-                    agentId,
-                    campaign,
-                    context,
-                    ...customData
-                }
+                customData || {}
             );
 
             if (result.success) {
                 res.json({
                     success: true,
-                    message: result.message || 'Call initiated successfully',
+                    message: result.message,
                     callId: result.callId,
                     status: result.status,
-                    phoneNumber: cleanPhone,
-                    mockMode: isMockMode
+                    provider: 'twilio' // Explicitly state provider
                 });
             } else {
                 res.status(400).json({
                     success: false,
-                    error: result.error || 'Failed to initiate call',
+                    error: result.error,
                     message: result.message
                 });
             }
         } catch (error) {
             console.error('Error initiating outbound call:', error);
-
             res.status(500).json({
                 success: false,
-                error: 'Internal server error during call initiation',
-                message: error.message,
-                details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+                error: 'Internal server error',
+                message: error.message
             });
         }
     }
 );
 
 /**
- * GET /api/voice/status/:callId - Get call status
+ * GET /api/voice/status/:callId
  */
 router.get('/status/:callId',
     authenticateToken,
     verifyTenantAccess,
     checkPermission('voice_agents', 'read'),
     async (req, res) => {
-        try {
-            const { callId } = req.params;
-            const tenantId = req.scopedTenantId;
+        const { callId } = req.params;
+        const tenantId = req.scopedTenantId;
 
-            // SECURITY FIX: Pass tenantId to enforce isolation
-            const status = voiceService.getCallStatus(callId, tenantId);
+        const status = voiceService.getCallStatus(callId, tenantId);
 
-            if (status) {
-                res.json({
-                    success: true,
-                    ...status
-                });
-            } else {
-                res.status(404).json({
-                    success: false,
-                    error: 'Call not found',
-                    callId
-                });
-            }
-        } catch (error) {
-            console.error('Error fetching call status:', error);
-            res.status(500).json({
-                success: false,
-                error: 'Failed to fetch call status',
-                message: error.message
-            });
+        if (status) {
+            res.json({ success: true, ...status });
+        } else {
+            res.status(404).json({ success: false, error: 'Call not found' });
         }
     }
 );
 
 /**
- * GET /api/voice/agents - Get available voice agents
+ * GET /api/voice/agents - Get AI Configuration (replaces "Agents")
  */
 router.get('/agents',
     authenticateToken,
     verifyTenantAccess,
-    checkPermission('voice_agents', 'read'),
     async (req, res) => {
+        // Return the Tenant's AI Config as the "Agent"
         try {
-            const agents = await voiceCakeService.getAllAgents();
+            const tenant = await prisma.tenant.findUnique({
+                where: { id: req.scopedTenantId },
+                select: { aiConfig: true, id: true }
+            });
+
+            const aiConfig = tenant.aiConfig || {};
+
+            // Construct a virtual agent based on config
+            const virtualAgent = {
+                id: `ai_${tenant.id}`,
+                name: aiConfig.aiName || 'Twilio AI Assistant',
+                status: 'active',
+                type: 'artificial_intelligence',
+                model: aiConfig.model || 'gpt-4'
+            };
 
             res.json({
                 success: true,
-                agents,
-                mockMode: isMockMode
+                agents: [virtualAgent]
             });
-        } catch (error) {
-            console.error('Error fetching agents:', error);
-            res.status(500).json({
-                success: false,
-                error: 'Failed to fetch agents',
-                message: error.message
-            });
+        } catch (e) {
+            res.status(500).json({ success: false, error: 'Failed to fetch agent info' });
         }
     }
 );
 
 /**
- * GET /api/voice/phone-numbers - Get available phone numbers
+ * GET /api/voice/phone-numbers - Get Tenant's Twilio Number
  */
 router.get('/phone-numbers',
     authenticateToken,
     verifyTenantAccess,
-    checkPermission('voice_agents', 'read'),
     async (req, res) => {
         try {
-            const phoneNumbers = await voiceCakeService.getPhoneNumbers();
+            const tenant = await prisma.tenant.findUnique({
+                where: { id: req.scopedTenantId },
+                select: { twilioConfig: true, phoneNumber: true }
+            });
+
+            const config = tenant.twilioConfig || {};
+            // Prefer config phoneNumber, fallback to tenant.phoneNumber
+            const number = config.phoneNumber || tenant.phoneNumber;
 
             res.json({
                 success: true,
-                phoneNumbers,
-                mockMode: isMockMode
+                phoneNumbers: number ? [{ phoneNumber: number, friendlyName: 'Business Line' }] : []
             });
-        } catch (error) {
-            console.error('Error fetching phone numbers:', error);
-            res.status(500).json({
-                success: false,
-                error: 'Failed to fetch phone numbers',
-                message: error.message
-            });
-        }
-    }
-);
-
-/**
- * GET /api/voice/stats - Get voice statistics
- */
-router.get('/stats',
-    authenticateToken,
-    verifyTenantAccess,
-    checkPermission('voice_agents', 'read'),
-    async (req, res) => {
-        try {
-            const stats = await voiceCakeService.getVoiceStats();
-
-            res.json({
-                success: true,
-                stats,
-                mockMode: isMockMode
-            });
-        } catch (error) {
-            console.error('Error fetching voice stats:', error);
-            res.status(500).json({
-                success: false,
-                error: 'Failed to fetch voice statistics',
-                message: error.message
-            });
+        } catch (e) {
+            res.status(500).json({ success: false, error: 'Failed to fetch phone numbers' });
         }
     }
 );

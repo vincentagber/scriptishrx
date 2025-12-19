@@ -471,6 +471,8 @@ router.get('/info',
                     aiName: tenant.aiName,
                     aiWelcomeMessage: tenant.aiWelcomeMessage,
                     customSystemPrompt: tenant.customSystemPrompt,
+                    aiConfig: tenant.aiConfig,
+                    twilioConfig: tenant.twilioConfig, // Proceed with caution if exposing secrets to frontend - typically filtering is needed
                     createdAt: tenant.createdAt
                 }
             });
@@ -494,7 +496,13 @@ router.patch('/info',
     async (req, res) => {
         try {
             const tenantId = req.user?.tenantId;
-            const { name, location, timezone, phoneNumber, brandColor, logoUrl, aiName, aiWelcomeMessage, customSystemPrompt } = req.body;
+            const {
+                name, location, timezone, phoneNumber,
+                brandColor, logoUrl,
+                aiName, aiWelcomeMessage, customSystemPrompt,
+                aiConfig, // JSON: { model, temperature, systemPrompt, voiceId, welcomeMessage, faqs: [] }
+                twilioConfig // JSON: { accountSid, authToken, phoneNumber ... }
+            } = req.body;
 
             const updateData = {};
             if (name !== undefined) updateData.name = name;
@@ -506,6 +514,10 @@ router.patch('/info',
             if (aiName !== undefined) updateData.aiName = aiName;
             if (aiWelcomeMessage !== undefined) updateData.aiWelcomeMessage = aiWelcomeMessage;
             if (customSystemPrompt !== undefined) updateData.customSystemPrompt = customSystemPrompt;
+
+            // New JSON Configs
+            if (aiConfig !== undefined) updateData.aiConfig = aiConfig;
+            if (twilioConfig !== undefined) updateData.twilioConfig = twilioConfig;
 
             const tenant = await prisma.tenant.update({
                 where: { id: tenantId },
