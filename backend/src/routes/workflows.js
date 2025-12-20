@@ -55,6 +55,75 @@ router.post('/',
                     success: false,
                     error: 'Name and trigger are required'
                 });
+
+                /**
+                 * POST /api/workflows/:id/trigger - Trigger a workflow (simulate execution)
+                 * This endpoint allows testing workflow triggers manually. It will validate
+                 * the workflow belongs to the requesting tenant and then attempt to "run"
+                 * the actions (simulation only). Real action handling should be implemented
+                 * by the worker/process responsible for workflow execution.
+                 */
+                router.post('/:id/trigger',
+                    authenticateToken,
+                    verifyTenantAccess,
+                    checkPermission('workflows', 'update'),
+                    async (req, res) => {
+                        try {
+                            const tenantId = req.scopedTenantId;
+                            const userId = req.user?.userId || req.user?.id;
+                            const { id } = req.params;
+                            const payload = req.body || {};
+
+                            const workflow = await prisma.workflow.findFirst({ where: { id, tenantId } });
+
+                            if (!workflow) {
+                                return res.status(404).json({ success: false, error: 'Workflow not found' });
+                            }
+
+                            if (!workflow.isActive) {
+                                return res.status(400).json({ success: false, error: 'Workflow is inactive' });
+                            }
+
+                            // Simulate execution: parse actions and return simulated results
+                            let actions = [];
+                            try {
+                                actions = workflow.actions ? JSON.parse(workflow.actions) : [];
+                            } catch (err) {
+                                console.warn('Failed to parse workflow actions JSON for', id, err.message);
+                                actions = [];
+                            }
+
+                            // Very small simulation: map actions to a result array
+                            const results = actions.map((a, idx) => ({
+                                index: idx,
+                                type: a.type || 'unknown',
+                                status: 'simulated',
+                                details: a
+                            }));
+
+                            // Create an audit log for manual trigger
+                            await prisma.auditLog.create({
+                                data: {
+                                    tenantId,
+                                    userId,
+                                    action: 'Trigger Workflow (manual)',
+                                    details: `Manually triggered workflow ${workflow.name} (${workflow.id})`
+                                }
+                            }).catch(err => console.error('Audit log failed:', err));
+
+                            return res.json({
+                                success: true,
+                                workflow: { id: workflow.id, name: workflow.name, trigger: workflow.trigger },
+                                payload,
+                                simulatedResults: results,
+                                message: 'Workflow trigger simulated (no external actions executed)'
+                            });
+                        } catch (error) {
+                            console.error('Error triggering workflow:', error);
+                            return res.status(500).json({ success: false, error: 'Failed to trigger workflow', details: error.message });
+                        }
+                    }
+                );
             }
 
             const workflow = await prisma.workflow.create({
