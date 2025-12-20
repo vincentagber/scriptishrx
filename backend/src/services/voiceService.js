@@ -17,9 +17,10 @@ function getCallLogs(tenantId = null) {
 }
 
 /**
- * Get call status by ID (with tenant isolation)
+ * Get Call Status
  */
-function getCallStatus(callId, tenantId = null) {
+async function getCallStatus(callId, tenantId = null) {
+    // First check local logs
     const log = callLogs.find(log => {
         if (tenantId) {
             return log.callId === callId && log.tenantId === tenantId;
@@ -27,16 +28,73 @@ function getCallStatus(callId, tenantId = null) {
         return log.callId === callId;
     });
 
-    if (!log) return null;
+    if (log) {
+        return {
+            callId: log.callId,
+            status: log.status,
+            phoneNumber: log.phoneNumber,
+            duration: log.duration,
+            timestamp: log.timestamp,
+            tenantId: log.tenantId,
+            source: 'local_log'
+        };
+    }
 
-    return {
-        callId: log.callId,
-        status: log.status, // In real-time, query Twilio API via twilioService
-        phoneNumber: log.phoneNumber,
-        duration: log.duration,
-        timestamp: log.timestamp,
-        tenantId: log.tenantId
-    };
+    // If not found locally, check Twilio
+    try {
+        const status = await twilioService.getCallStatus(tenantId, callId);
+        return {
+            ...status,
+            source: 'twilio_api'
+        };
+    } catch (e) {
+        return null;
+    }
+}
+
+/**
+ * Handle WebSocket Connection for Twilio Media Stream
+ */
+function handleConnection(ws, req) {
+    console.log('[VoiceService] New Media Stream Connection');
+
+    // Here we would handle the bidirectional audio stream:
+    // 1. Receive 'media' events with audio chunks (base64)
+    // 2. Send to OpenAI Realtime API or Transcriber
+    // 3. Receive audio back
+    // 4. Send 'media' events back to Twilio
+
+    ws.on('message', (message) => {
+        try {
+            const msg = JSON.parse(message);
+            switch (msg.event) {
+                case 'connected':
+                    console.log('[Twilio] Stream connected protocol: ' + msg.protocol);
+                    break;
+                case 'start':
+                    console.log(`[Twilio] Stream started: ${msg.start.streamSid}`);
+                    // We could initiate OpenAI session here
+                    break;
+                case 'media':
+                    // msg.media.payload is base64 audio (mulaw 8000Hz usually)
+                    // TODO: Process Audio
+                    break;
+                case 'stop':
+                    console.log(`[Twilio] Stream stopped: ${msg.stop.streamSid}`);
+                    break;
+            }
+        } catch (e) {
+            console.error('[VoiceService] Error parsing message:', e);
+        }
+    });
+
+    ws.on('close', () => {
+        console.log('[VoiceService] Stream disconnected');
+    });
+
+    ws.on('error', (err) => {
+        console.error('[VoiceService] WebSocket Error:', err);
+    });
 }
 
 /**
@@ -92,5 +150,6 @@ async function initiateOutboundCall(phoneNumber, tenantId, customData = {}) {
 module.exports = {
     getCallLogs,
     getCallStatus,
-    initiateOutboundCall
+    initiateOutboundCall,
+    handleConnection
 };

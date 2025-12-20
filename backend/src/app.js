@@ -75,21 +75,8 @@ try {
     legacyChatRouter = null;
 }
 
-// LOAD VOICECAKE ROUTES
-let voiceCakeRouter = null;
-const voiceCakeFilePath = path.join(__dirname, 'routes', 'voicecake.js');
-if (fs.existsSync(voiceCakeFilePath)) {
-    try {
-        voiceCakeRouter = require('./routes/voicecake');
-        console.log('✓ VoiceCake routes loaded');
-    } catch (err) {
-        console.error('ERROR: VoiceCake routes failed to load:', err.message);
-        voiceCakeRouter = null;
-    }
-} else {
-    console.warn('INFO: routes/voicecake.js not found (voicecake integration not enabled)');
-    voiceCakeRouter = null;
-}
+// VoiceCake routes removed
+const voiceCakeRouter = null;
 
 // ==================== HELPER FUNCTIONS ====================
 
@@ -115,6 +102,7 @@ if (legacyChatRouter) {
 }
 
 // Other routes
+// Other routes
 app.use('/api/clients', clientsRouter);
 app.use('/api/bookings', bookingsRouter);
 app.use('/api/minutes', minutesRouter);
@@ -125,7 +113,6 @@ app.use('/api/notifications', notificationsRouter);
 app.use('/api/payments', paymentsRouter);
 app.use('/api/upload', uploadRouter);
 app.use('/api/voice', voiceRouter);
-// app.use('/api/voicecake', voiceCakeRouter); // Deprecated
 app.use('/api/marketing', marketingRouter);
 app.use('/api/organization', organizationRouter);
 
@@ -195,7 +182,6 @@ app.get('/api/health', (req, res) => {
             legacyChat: !!legacyChatRouter,
             clients: true,
             bookings: true,
-            voicecake: fs.existsSync(voiceCakeFilePath) ? 'REAL' : 'MOCK',
             voice: true,
             webhooks: true
         }

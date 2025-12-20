@@ -57,4 +57,20 @@ router.post('/webhook/voice/gather', async (req, res) => {
     }
 });
 
+// Status Callback
+router.post('/webhook/status', async (req, res) => {
+    try {
+        const { CallSid, CallStatus, CallDuration } = req.body;
+        console.log(`[Twilio] Call Status ${CallSid}: ${CallStatus} (${CallDuration}s)`);
+
+        // Here we could update database status
+        // await voiceService.updateCallStatus(CallSid, CallStatus, CallDuration);
+
+        res.status(200).end();
+    } catch (error) {
+        console.error('Twilio Status Callback Error:', error);
+        res.status(500).send('Error');
+    }
+});
+
 module.exports = router;

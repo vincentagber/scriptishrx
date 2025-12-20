@@ -35,8 +35,11 @@ router.post('/outbound', authenticate, async (req, res) => {
  */
 router.get('/:callId', authenticate, async (req, res) => {
     try {
-        const voiceCakeService = require('../services/voiceCakeService');
-        const details = await voiceCakeService.getCallDetails(req.params.callId);
+        const voiceService = require('../services/voiceService');
+        const details = await voiceService.getCallStatus(req.params.callId, req.user.tenantId);
+        if (!details) {
+            return res.status(404).json({ error: 'Call not found' });
+        }
         res.json(details);
     } catch (error) {
         res.status(500).json({ error: error.message });

@@ -1,5 +1,7 @@
 const sgMail = require('@sendgrid/mail');
 const twilio = require('twilio');
+const prisma = require('../lib/prisma');
+const socketService = require('./socketService');
 
 class NotificationService {
     constructor() {
@@ -23,6 +25,32 @@ class NotificationService {
             this.twilioPhone = process.env.TWILIO_PHONE_NUMBER;
         } else {
             console.warn('⚠️ NotificationService: TWILIO_CREDS missing. SMS will be logged to console.');
+        }
+    }
+
+    /**
+     * Create a system notification and broadcast via Socket.IO
+     */
+    async createNotification(userId, title, message, type = 'info', link = null) {
+        try {
+            // Persist to DB
+            const notification = await prisma.notification.create({
+                data: {
+                    userId,
+                    title,
+                    message,
+                    type,
+                    link
+                }
+            });
+
+            // Broadcast Real-time
+            socketService.sendToUser(userId, 'notification:new', notification);
+
+            return notification;
+        } catch (error) {
+            console.error('Failed to create notification:', error);
+            // Don't throw, just log. Notification failure shouldn't break the main flow.
         }
     }
 

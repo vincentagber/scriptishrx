@@ -43,15 +43,17 @@ if (process.env.NODE_ENV === 'production' && process.env.MOCK_EXTERNAL_SERVICES 
     process.exit(1);
 }
 
-// Warn about VoiceCake (optional)
-if (!process.env.VOICECAKE_API_KEY) {
-    console.warn('⚠️  Warning: VOICECAKE_API_KEY not set - VoiceCake features will be unavailable');
-}
+// VoiceCake check removed
 
 
 const server = http.createServer(app);
 
-// WebSocket handling
+// Initialize Socket.IO
+const socketService = require('./services/socketService');
+const io = socketService.init(server);
+console.log('socket.io initialized');
+
+// WebSocket handling (Native WS for Twilio Media Streams)
 const WebSocket = require('ws');
 const wss = new WebSocket.Server({
     server,
@@ -89,7 +91,6 @@ server.listen(PORT, () => {
     console.log(`Root Directory:  ${path.resolve(__dirname, '../..')}`);
     console.log('\nConfiguration Status:');
     console.log(`   JWT Secret:      ${process.env.JWT_SECRET ? '✓ Set' : '✗ Missing'}`);
-    console.log(`   VoiceCake API:   ${process.env.VOICECAKE_API_KEY ? '✓ Set' : '⚠ Not set (mock mode)'}`);
     console.log(`   OpenAI API:      ${process.env.OPENAI_API_KEY ? '✓ Set' : '⚠ Not set'}`);
     console.log(`   Mock Mode:       ${process.env.MOCK_EXTERNAL_SERVICES === 'true' ? 'Enabled' : 'Disabled'}`);
     console.log('='.repeat(60) + '\n');
@@ -98,7 +99,6 @@ server.listen(PORT, () => {
     console.log('Testing routes:');
     console.log(`   curl http://localhost:${PORT}/`);
     console.log(`   curl http://localhost:${PORT}/api/chat/status`);
-    console.log(`   curl http://localhost:${PORT}/api/voicecake/agents`);
     console.log('');
 });
 

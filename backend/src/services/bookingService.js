@@ -57,6 +57,24 @@ class BookingService {
             }
         }
 
+        // Notify Tenant Users (Admin/Doctor) - REAL-TIME
+        try {
+            const tenantUsers = await prisma.user.findMany({
+                where: { tenantId }
+            });
+
+            for (const user of tenantUsers) {
+                await notificationService.createNotification(
+                    user.id,
+                    'New Booking',
+                    `New appointment with ${booking.client.name} on ${booking.date.toLocaleDateString()}`,
+                    'booking'
+                );
+            }
+        } catch (err) {
+            console.error('Failed to notify tenant users:', err);
+        }
+
         return booking;
     }
 

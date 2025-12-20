@@ -108,6 +108,42 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         return () => clearTimeout(delayDebounceFn);
     }, [searchTerm]);
 
+    // Real-time Notifications
+    const [unreadCount, setUnreadCount] = useState(0);
+
+    useEffect(() => {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        // 1. Fetch initial count
+        fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/notifications`, {
+            headers: { Authorization: `Bearer ${token}` }
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (Array.isArray(data)) {
+                    setUnreadCount(data.filter((n: any) => !n.isRead).length);
+                }
+            })
+            .catch(console.error);
+
+        // 2. Connect Socket
+        // Dynamic import to avoid SSR issues if any, though 'use client' handles it usually
+        import('socket.io-client').then(({ io }) => {
+            const socket = io(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000', {
+                auth: { token }
+            });
+
+            socket.on('notification:new', (newNotification) => {
+                console.log('New notification received:', newNotification);
+                setUnreadCount(prev => prev + 1);
+                // Can add Toast here
+            });
+
+            return () => socket.disconnect();
+        });
+    }, []);
+
 
     const logout = () => {
         localStorage.removeItem('token');
@@ -246,7 +282,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         <div className="flex items-center gap-2">
                             <button className="relative p-2 text-gray-500 hover:bg-gray-100 rounded-full transition-colors">
                                 <Bell className="w-5 h-5" />
-                                <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
+                                {unreadCount > 0 && (
+                                    <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white animate-pulse"></span>
+                                )}
                             </button>
                         </div>
 

@@ -83,51 +83,14 @@ class TwilioService {
         const { To, From, CallSid } = params;
         console.log(`[Twilio] Inbound call from ${From} to ${To} (Sid: ${CallSid})`);
 
-        // Find tenant by phone number
-        // We search users or tenants who own this number.
-        // For now, assuming exact match on Tenant.twilioConfig->phoneNumber (This requires a JSON query or finding all tenants and checking, which is slow.
-        // Better: Query Tenant where phoneNumber string matches. But we moved it to JSON.
-        // Fallback: Check if we still have phoneNumber column? Yes, schema had `phoneNumber String? @unique` on Tenant. We should use that for lookups!
-
-        const tenant = await prisma.tenant.findFirst({
-            where: {
-                OR: [
-                    { phoneNumber: To }, // Main column
-                    { twilioConfig: { path: ['phoneNumber'], equals: To } } // JSON path query (Postgres)
-                ]
-            }
-        });
-
         const voiceResponse = new twilio.twiml.VoiceResponse();
 
-        if (!tenant) {
-            console.warn(`[Twilio] Unknown number ${To}. Playing default error.`);
-            voiceResponse.say('We are sorry, but this number is not currently assigned to a valid organization.');
-            return voiceResponse.toString();
-        }
-
-        // Fetch AI Config
-        const aiConfig = tenant.aiConfig || {};
-        const welcomeMessage = aiConfig.welcomeMessage || tenant.aiWelcomeMessage || 'Thank you for calling. How can I help you today?';
-
-        // Simple Logic: Say welcome message and record (or Gather)
-        // For advanced AI, we would <Connect><Stream> here.
-
-        voiceResponse.say({
-            voice: aiConfig.voiceId || 'alice', // 'alice' is a standard voice, customizable
-        }, welcomeMessage);
-
-        // Record the user's response to process later (Simple voicemail / interaction)
-        // OR Gather for IVR
-        const gather = voiceResponse.gather({
-            input: 'speech',
-            action: `${process.env.APP_URL}/api/twilio/webhook/voice/gather?tenantId=${tenant.id}`,
-            timeout: 3,
-            language: 'en-US'
+        // Connect to Media Stream for AI processing
+        const host = process.env.APP_URL ? process.env.APP_URL.replace('https://', '').replace('http://', '') : 'localhost:5000';
+        const startStream = voiceResponse.connect();
+        startStream.stream({
+            url: `wss://${host}/media-stream`
         });
-
-        // If they don't say anything
-        voiceResponse.say('I did not hear anything. Please try again.');
 
         return voiceResponse.toString();
     }
@@ -140,12 +103,12 @@ class TwilioService {
         console.log(`[Twilio] Inbound SMS from ${From} to ${To}: ${Body}`);
 
         const tenant = await prisma.tenant.findFirst({
-            where: { phoneNumber: To } // Using the indexed column for lookup
+            where: { phoneNumber: To }
         });
 
         if (!tenant) {
             console.warn(`[Twilio] Inbound SMS to unknown number: ${To}`);
-            return null; // Ignore or auto-reply error
+            return null;
         }
 
         // Process with ChatService
