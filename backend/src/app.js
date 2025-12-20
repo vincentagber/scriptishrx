@@ -93,6 +93,7 @@ app.use('/api/users', usersRouter);
 
 // Chat routes - AI chat takes priority on /api/chat
 app.use('/api/chat', chatAIRouter);
+app.use('/api/chat', require('./routes/ai-refine')); // Mount refine endpoint under /api/chat/refine
 console.log('→ /api/chat registered (AI Chat)');
 
 // Legacy chat on different path (if it exists)

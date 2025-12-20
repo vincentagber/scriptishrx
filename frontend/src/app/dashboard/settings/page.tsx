@@ -496,9 +496,13 @@ export default function SettingsPage() {
             const res = await fetch('http://localhost:5000/api/workflows', {
                 headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
             });
+            const data = await res.json();
+            console.log('Workflows fetched:', data);
+
             if (res.ok) {
-                const data = await res.json();
-                setWorkflows(data);
+                setWorkflows(data.workflows || []); // Ensure we access the .workflows property
+            } else {
+                console.error('Failed to fetch workflows:', data);
             }
         } catch (error) {
             console.error("Failed to fetch workflows", error);

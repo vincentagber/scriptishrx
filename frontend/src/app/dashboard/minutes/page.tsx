@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, FileText, Calendar, Pencil, Trash2, X, Loader2, Check, AlertCircle } from 'lucide-react';
+import { Plus, FileText, Calendar, Pencil, Trash2, X, Loader2, Check, AlertCircle, Zap } from 'lucide-react';
 
 // Toast Component
 function Toast({ message, type, onClose }: { message: string, type: 'success' | 'error', onClose: () => void }) {
@@ -194,6 +194,29 @@ export default function MinutesPage() {
                                 </div>
                                 <div className="flex gap-2">
                                     <button
+                                        onClick={async () => {
+                                            setLoading(true);
+                                            try {
+                                                const res = await fetch('http://localhost:5000/api/chat/analyze', {
+                                                    method: 'POST',
+                                                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+                                                    body: JSON.stringify({ text: minute.content })
+                                                });
+                                                const data = await res.json();
+                                                if (res.ok) {
+                                                    alert(`Action Items:\n${data.actionItems.join('\n- ')}\n\nDecisions:\n${data.decisions.join('\n- ')}`);
+                                                } else {
+                                                    showToast('Analysis failed', 'error');
+                                                }
+                                            } catch (e) { showToast('Error analyzing', 'error'); }
+                                            setLoading(false);
+                                        }}
+                                        className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                                        title="AI Analyze"
+                                    >
+                                        <Zap className="w-4 h-4" />
+                                    </button>
+                                    <button
                                         onClick={() => openEditModal(minute)}
                                         className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                                         title="Edit"
@@ -252,12 +275,36 @@ export default function MinutesPage() {
 
                             <div>
                                 <label className="block text-sm font-semibold text-gray-700 mb-2">Meeting Notes</label>
-                                <textarea
-                                    placeholder="Type your notes here..."
-                                    className="w-full p-4 bg-gray-50 border-none rounded-xl text-gray-900 h-48 resize-none focus:ring-2 focus:ring-black/5 outline-none"
-                                    value={newMinute.content}
-                                    onChange={e => setNewMinute({ ...newMinute, content: e.target.value })}
-                                />
+                                <div className="relative">
+                                    <textarea
+                                        placeholder="Type your rough notes here..."
+                                        className="w-full p-4 bg-gray-50 border-none rounded-xl text-gray-900 h-48 resize-none focus:ring-2 focus:ring-black/5 outline-none pb-12"
+                                        value={newMinute.content}
+                                        onChange={e => setNewMinute({ ...newMinute, content: e.target.value })}
+                                    />
+                                    <button
+                                        onClick={async () => {
+                                            if (!newMinute.content) return showToast('Enter some notes first.', 'error');
+                                            setLoading(true);
+                                            try {
+                                                const res = await fetch('http://localhost:5000/api/chat/refine', {
+                                                    method: 'POST',
+                                                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+                                                    body: JSON.stringify({ text: newMinute.content })
+                                                });
+                                                const data = await res.json();
+                                                if (res.ok) setNewMinute(prev => ({ ...prev, content: data.refined }));
+                                                else showToast('AI Refine failed.', 'error');
+                                            } catch (e) { showToast('AI Error', 'error'); }
+                                            setLoading(false);
+                                        }}
+                                        disabled={loading || !newMinute.content}
+                                        className="absolute right-4 bottom-4 px-3 py-1.5 bg-purple-100 text-purple-700 text-xs font-bold rounded-lg hover:bg-purple-200 transition-colors flex items-center gap-1 disabled:opacity-50"
+                                    >
+                                        {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3" />}
+                                        AI Polish
+                                    </button>
+                                </div>
                             </div>
 
                             <div className="flex justify-end gap-3 pt-4">

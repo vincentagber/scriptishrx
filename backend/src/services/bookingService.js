@@ -1,5 +1,6 @@
 const prisma = require('../lib/prisma');
 const notificationService = require('./notificationService');
+const workflowService = require('./workflowService');
 
 class BookingService {
     async getBookings(tenantId) {
@@ -74,6 +75,15 @@ class BookingService {
         } catch (err) {
             console.error('Failed to notify tenant users:', err);
         }
+
+        // Trigger Custom Workflows
+        await workflowService.trigger('booking:created', tenantId, {
+            bookingId: booking.id,
+            client: booking.client,
+            tenant: booking.tenant,
+            status: booking.status,
+            date: booking.date
+        });
 
         return booking;
     }

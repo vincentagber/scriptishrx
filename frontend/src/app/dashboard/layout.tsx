@@ -186,6 +186,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         <NavItem href="/dashboard" label="Dashboard" icon={<LayoutDashboard />} active={pathname === '/dashboard'} />
                         <NavItem href="/dashboard/clients" label="Customers" icon={<Users />} active={pathname === '/dashboard/clients'} />
                         <NavItem href="/dashboard/bookings" label="Bookings" icon={<Calendar />} active={pathname === '/dashboard/bookings'} />
+                        <NavItem href="/dashboard/minutes" label="Meeting Minutes" icon={<FileText />} active={pathname === '/dashboard/minutes'} />
                         <NavItem href="/dashboard/insights" label="Analytics" icon={<PieChart />} active={pathname === '/dashboard/insights'} />
                     </Section>
 

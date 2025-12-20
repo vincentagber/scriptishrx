@@ -55,16 +55,78 @@ async function getCallStatus(callId, tenantId = null) {
 /**
  * Handle WebSocket Connection for Twilio Media Stream
  */
+const OpenAI = require('openai');
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+// Map to store active transcripts: streamSid -> string[]
+const activeTranscripts = new Map();
+const activeCallers = new Map(); // streamSid -> { phoneNumber, tenantId }
+
+// Helper to save minute
+async function saveMeetingMinute(streamSid) {
+    const transcriptParts = activeTranscripts.get(streamSid);
+    if (!transcriptParts || transcriptParts.length === 0) {
+        activeTranscripts.delete(streamSid);
+        activeCallers.delete(streamSid);
+        return;
+    }
+
+    const fullTranscript = transcriptParts.join(' ');
+    const callerInfo = activeCallers.get(streamSid);
+
+    // Default tenant if not found (e.g. for demo)
+    const tenantId = callerInfo?.tenantId;
+
+    console.log(`[VoiceService] Generating Minute for Stream ${streamSid}...`);
+
+    try {
+        // 1. AI Summarization
+        const completion = await openai.chat.completions.create({
+            model: "gpt-4o",
+            messages: [
+                { role: "system", content: "You are an expert secretary. Convert the following call transcript into a professional meeting minute summary." },
+                { role: "user", content: fullTranscript }
+            ],
+        });
+        const summary = completion.choices[0].message.content;
+
+        if (tenantId) {
+            // 2. Find Client
+            let client = null;
+            if (callerInfo?.phoneNumber) {
+                client = await prisma.client.findFirst({
+                    where: { phone: callerInfo.phoneNumber, tenantId }
+                });
+            }
+
+            // 3. Save to DB
+            await prisma.meetingMinute.create({
+                data: {
+                    tenantId,
+                    clientId: client ? client.id : undefined, // Link if client found
+                    content: `[AI Generated from Call]\n\n${summary}`,
+                    createdAt: new Date()
+                }
+            });
+            console.log('[VoiceService] Meeting Minute saved successfully.');
+        }
+
+    } catch (err) {
+        console.error('[VoiceService] Failed to save minute:', err);
+    } finally {
+        activeTranscripts.delete(streamSid);
+        activeCallers.delete(streamSid);
+    }
+}
+
+/**
+ * Handle WebSocket Connection for Twilio Media Stream
+ */
 function handleConnection(ws, req) {
     console.log('[VoiceService] New Media Stream Connection');
+    let streamSid = null;
 
-    // Here we would handle the bidirectional audio stream:
-    // 1. Receive 'media' events with audio chunks (base64)
-    // 2. Send to OpenAI Realtime API or Transcriber
-    // 3. Receive audio back
-    // 4. Send 'media' events back to Twilio
-
-    ws.on('message', (message) => {
+    ws.on('message', async (message) => {
         try {
             const msg = JSON.parse(message);
             switch (msg.event) {
@@ -72,15 +134,27 @@ function handleConnection(ws, req) {
                     console.log('[Twilio] Stream connected protocol: ' + msg.protocol);
                     break;
                 case 'start':
-                    console.log(`[Twilio] Stream started: ${msg.start.streamSid}`);
-                    // We could initiate OpenAI session here
+                    streamSid = msg.start.streamSid;
+                    console.log(`[Twilio] Stream started: ${streamSid}`);
+                    activeTranscripts.set(streamSid, []); // Initialize transcript array
+
+                    // Identify caller (Custom Parameter parsing or DB lookup would happen here)
+                    if (msg.start.customParameters && msg.start.customParameters.tenantId) {
+                        activeCallers.set(streamSid, {
+                            tenantId: msg.start.customParameters.tenantId,
+                            phoneNumber: msg.start.customParameters.phoneNumber
+                        });
+                    }
                     break;
                 case 'media':
-                    // msg.media.payload is base64 audio (mulaw 8000Hz usually)
-                    // TODO: Process Audio
+                    // Here we would receive base64 audio.
+                    // For DEMO PURPOSES, if we had a text stream we would push to activeTranscripts.
+                    // Since we don't have a real STT engine connected here yet, we leave this placeholder.
+                    // activeTranscripts.get(streamSid).push("Demo transcript line.");
                     break;
                 case 'stop':
                     console.log(`[Twilio] Stream stopped: ${msg.stop.streamSid}`);
+                    await saveMeetingMinute(msg.stop.streamSid);
                     break;
             }
         } catch (e) {
@@ -90,6 +164,7 @@ function handleConnection(ws, req) {
 
     ws.on('close', () => {
         console.log('[VoiceService] Stream disconnected');
+        if (streamSid) saveMeetingMinute(streamSid);
     });
 
     ws.on('error', (err) => {
