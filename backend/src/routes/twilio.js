@@ -57,6 +57,29 @@ router.post('/webhook/voice/gather', async (req, res) => {
     }
 });
 
+// Outbound Call Webhook (Called when Twilio connects the call)
+router.post('/webhook/voice/outbound', (req, res) => {
+    try {
+        const script = req.query.script || 'Hello from ScriptishRx.';
+        const VoiceResponse = require('twilio').twiml.VoiceResponse;
+        const response = new VoiceResponse();
+
+        response.say({ voice: 'alice' }, script);
+        // Keep line open or record? For now, pause then hangup.
+        response.pause({ length: 1 });
+
+        // Optional: Stream for AI analysis if desired
+        // const startStream = response.connect();
+        // startStream.stream({ url: `wss://${req.get('host')}/media-stream` });
+
+        res.type('text/xml');
+        res.send(response.toString());
+    } catch (error) {
+        console.error('Twilio Outbound Webhook Error:', error);
+        res.status(500).send('Error');
+    }
+});
+
 // Status Callback
 router.post('/webhook/status', async (req, res) => {
     try {

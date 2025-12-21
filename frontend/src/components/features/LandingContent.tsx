@@ -409,9 +409,9 @@ export const Testimonials = () => (
                 <div className="flex flex-col items-center gap-2">
                     <div className="w-16 h-16 bg-slate-300 rounded-full overflow-hidden shadow-md">
                         {/* Placeholder Avatar */}
-                        <img src="https://i.pravatar.cc/150?u=alice" alt="Client" className="w-full h-full object-cover" />
+                        <img src="https://i.pravatar.cc/150?u=alex" alt="Client" className="w-full h-full object-cover" />
                     </div>
-                    <div className="font-bold text-slate-900 text-lg">Alice Hernandez</div>
+                    <div className="font-bold text-slate-900 text-lg">Alex Hernandez</div>
                     <div className="text-sm text-slate-500 font-medium">CEO, TechStart Inc.</div>
                 </div>
             </div>

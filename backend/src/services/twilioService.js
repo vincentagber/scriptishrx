@@ -15,14 +15,27 @@ class TwilioService {
 
         const config = tenant?.twilioConfig || {};
         const accountSid = config.accountSid || process.env.TWILIO_ACCOUNT_SID;
+        const apiKeySid = config.apiKeySid || process.env.TWILIO_API_KEY_SID;
+        const apiKeySecret = config.apiKeySecret || process.env.TWILIO_API_KEY_SECRET;
         const authToken = config.authToken || process.env.TWILIO_AUTH_TOKEN;
 
-        if (!accountSid || !authToken) {
-            throw new Error('Twilio credentials not found for tenant or environment.');
+        if (!accountSid) {
+            throw new Error('Twilio Account SID not found for tenant or environment.');
+        }
+
+        let client;
+        if (apiKeySid && apiKeySecret) {
+            // Production Preferred: using API Key
+            client = twilio(apiKeySid, apiKeySecret, { accountSid });
+        } else if (authToken) {
+            // Standard: using Auth Token
+            client = twilio(accountSid, authToken);
+        } else {
+            throw new Error('Twilio credentials (Auth Token or API Key) missing.');
         }
 
         return {
-            client: twilio(accountSid, authToken),
+            client,
             phoneNumber: config.phoneNumber || process.env.TWILIO_PHONE_NUMBER,
             accountSid
         };

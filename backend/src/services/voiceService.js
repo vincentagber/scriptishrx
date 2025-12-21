@@ -74,7 +74,6 @@ async function saveMeetingMinute(streamSid) {
     const fullTranscript = transcriptParts.join(' ');
     const callerInfo = activeCallers.get(streamSid);
 
-    // Default tenant if not found (e.g. for demo)
     const tenantId = callerInfo?.tenantId;
 
     console.log(`[VoiceService] Generating Minute for Stream ${streamSid}...`);
@@ -148,9 +147,10 @@ function handleConnection(ws, req) {
                     break;
                 case 'media':
                     // Here we would receive base64 audio.
-                    // For DEMO PURPOSES, if we had a text stream we would push to activeTranscripts.
-                    // Since we don't have a real STT engine connected here yet, we leave this placeholder.
-                    // activeTranscripts.get(streamSid).push("Demo transcript line.");
+                    // Here we would receive base64 audio.
+                    // TODO: Connect this stream to a Speech-to-Text service (e.g., Deepgram, OpenAI Realtime) 
+                    // to populate 'activeTranscripts' in real-time.
+                    // Currently, without an external STT provider, the transcript remains empty.
                     break;
                 case 'stop':
                     console.log(`[Twilio] Stream stopped: ${msg.stop.streamSid}`);

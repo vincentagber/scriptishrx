@@ -8,8 +8,8 @@ const { checkPermission, verifyTenantAccess } = require('../middleware/permissio
 const { checkSubscriptionAccess, checkFeature } = require('../middleware/subscription');
 const { voiceLimiter } = require('../middleware/rateLimiting');
 
-// Mock Mode is now determined by Twilio Config presence (real) vs absence (mock/dev)
-const isMockMode = process.env.MOCK_EXTERNAL_SERVICES === 'true';
+// Mock Mode removed for production
+
 
 /**
  * GET /api/voice/health - Health check endpoint (public)
@@ -20,7 +20,6 @@ router.get('/health', (req, res) => {
         service: 'voice',
         provider: 'twilio',
         status: 'operational',
-        mockMode: isMockMode,
         timestamp: new Date().toISOString()
     });
 });

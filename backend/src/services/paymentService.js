@@ -10,10 +10,7 @@ class PaymentService {
 
     async createCheckoutSession(user, plan) {
         if (!stripe) {
-            return {
-                url: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/dashboard/settings?session_id=mock_session_${Date.now()}`,
-                mock: true
-            };
+            throw new Error('Payment processing unavailable: Stripe configuration missing.');
         }
 
         // Map plan to Price ID (Use env vars in real app)
@@ -44,7 +41,7 @@ class PaymentService {
         const subscription = await prisma.subscription.findUnique({ where: { userId } });
 
         if (!stripe || !subscription?.stripeId) {
-            return { url: 'https://billing.stripe.com/p/login/test_mock_portal' }; // Fallback
+            throw new Error('Billing portal unavailable.');
         }
 
         const session = await stripe.billingPortal.sessions.create({

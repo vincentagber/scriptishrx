@@ -1,16 +1,15 @@
 const express = require('express');
 const router = express.Router();
 
-// Mock database for newsletter subscriptions
-// In a real app, this would be a database model
-const subscribers = [];
+const prisma = require('../lib/prisma');
+const subscribers = []; // TODO: Implement Subscriber model in Prisma
 
 /**
  * @route POST /api/marketing/newsletter
  * @desc Subscribe to newsletter
  * @access Public
  */
-router.post('/newsletter', (req, res) => {
+router.post('/newsletter', async (req, res) => {
     const { email } = req.body;
 
     if (!email) {
@@ -23,26 +22,14 @@ router.post('/newsletter', (req, res) => {
         return res.status(400).json({ success: false, error: 'Invalid email format' });
     }
 
-    // Check if already subscribed (mock check)
-    if (subscribers.includes(email)) {
-        return res.json({
-            success: true,
-            message: 'You are already subscribed!',
-            alreadySubscribed: true
-        });
-    }
+    // TODO: Save to database
+    // await prisma.subscriber.create({ data: { email } });
+    console.log(`[Newsletter] New subscriber request: ${email}`);
 
-    subscribers.push(email);
-    console.log(`[Newsletter] New subscriber: ${email}`);
-
-    // Simulate network delay
-    setTimeout(() => {
-        res.json({
-            success: true,
-            message: 'Successfully subscribed to the newsletter!',
-            subscribersCount: subscribers.length
-        });
-    }, 800);
+    res.json({
+        success: true,
+        message: 'Successfully subscribed to the newsletter!'
+    });
 });
 
 /**
@@ -50,20 +37,26 @@ router.post('/newsletter', (req, res) => {
  * @desc Get public platform stats
  * @access Public
  */
-router.get('/stats', (req, res) => {
-    // Return mock stats that slightly vary to look "realtime"
-    // In production, this would count actual users/bookings from DB
-    const randomVariation = (base, range) => base + Math.floor(Math.random() * range);
+router.get('/stats', async (req, res) => {
+    try {
+        const [activeUsers, appointments] = await Promise.all([
+            prisma.user.count(),
+            prisma.booking.count()
+        ]);
 
-    res.json({
-        success: true,
-        stats: {
-            activeUsers: randomVariation(75000, 500),
-            downloads: randomVariation(62000, 200),
-            appointments: randomVariation(100000, 1000),
-            satisfaction: 99
-        }
-    });
+        res.json({
+            success: true,
+            stats: {
+                activeUsers,
+                downloads: 0, // Track if app downloads are applicable
+                appointments,
+                satisfaction: 99 // Placeholder until feedback system is linked
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching stats:', error);
+        res.status(500).json({ success: false, error: 'Failed to fetch stats' });
+    }
 });
 
 module.exports = router;
