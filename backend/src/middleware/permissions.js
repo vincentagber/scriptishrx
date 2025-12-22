@@ -12,7 +12,7 @@
 
 const prisma = require('../lib/prisma');
 
-const prisma = require('../lib/prisma');
+
 
 /**
  * Check if user has permission for action on resource
