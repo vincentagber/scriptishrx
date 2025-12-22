@@ -153,13 +153,17 @@ export default function VoicePage() {
                 })
             });
 
+            const data = await res.json();
+
             if (res.ok) {
                 alert('Inbound number updated! Please ensure your Twilio webhook is set pointing to this server.');
             } else {
-                alert('Failed to save inbound number');
+                // Show specific error from backend (e.g. invalid format)
+                alert(data.error || 'Failed to save inbound number');
             }
         } catch (error) {
             console.error('Error saving inbound:', error);
+            alert('An unexpected error occurred while saving.');
         } finally {
             setInboundSaving(false);
         }
