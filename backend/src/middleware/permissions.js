@@ -225,14 +225,17 @@ async function verifyTenantAccess(req, res, next) {
  */
 async function getUserPermissions(req, res) {
     try {
-        const userRole = req.user?.role;
         const userId = req.user?.userId || req.user?.id;
+        const userStringRole = req.user?.role;
 
         const user = await prisma.user.findUnique({
             where: { id: userId },
             include: {
                 tenant: true,
-                subscription: true
+                subscription: true,
+                definedRole: {
+                    include: { permissions: true }
+                }
             }
         });
 
@@ -243,7 +246,16 @@ async function getUserPermissions(req, res) {
             });
         }
 
-        const permissions = PERMISSIONS[userRole] || {};
+        let assignedPermissions = {};
+        const permissionsList = user.definedRole?.permissions || [];
+
+        // Convert DB permissions list to the expected format { resource: [actions] }
+        permissionsList.forEach(p => {
+            if (!assignedPermissions[p.resource]) {
+                assignedPermissions[p.resource] = [];
+            }
+            assignedPermissions[p.resource].push(p.action);
+        });
 
         res.json({
             success: true,
@@ -259,10 +271,10 @@ async function getUserPermissions(req, res) {
                 name: user.tenant.name,
                 plan: user.tenant.plan
             },
-            permissions,
-            isSuperAdmin: userRole === 'SUPER_ADMIN',
-            isOwner: userRole === 'OWNER',
-            isAdmin: ['OWNER', 'ADMIN'].includes(userRole)
+            permissions: assignedPermissions,
+            isSuperAdmin: userStringRole === 'SUPER_ADMIN',
+            isOwner: userStringRole === 'OWNER',
+            isAdmin: ['OWNER', 'ADMIN'].includes(userStringRole)
         });
     } catch (error) {
         console.error('Error fetching user permissions:', error);
@@ -279,6 +291,5 @@ module.exports = {
     requireSuperAdmin,
     requireOwnerOrAdmin,
     verifyTenantAccess,
-    getUserPermissions,
-    PERMISSIONS
+    getUserPermissions
 };
