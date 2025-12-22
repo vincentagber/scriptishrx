@@ -4,6 +4,8 @@ const rateLimit = require('express-rate-limit');
 const cookieParser = require('cookie-parser');
 const path = require('path');
 const fs = require('fs');
+const helmet = require('helmet');
+const hpp = require('hpp');
 
 const app = express();
 
@@ -11,14 +13,17 @@ const app = express();
 app.set('trust proxy', 1);
 
 // Security & Middleware
+app.use(helmet()); // Secure HTTP headers
+app.use(hpp());    // Prevent HTTP Parameter Pollution
+
 app.use(cors({
     origin: ['http://localhost:3000', 'http://localhost:5000', process.env.FRONTEND_URL],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
-app.use(express.urlencoded({ extended: false }));
-app.use(express.json());
+app.use(express.urlencoded({ extended: false, limit: '10mb' }));
+app.use(express.json({ limit: '10mb' }));
 app.use(cookieParser());
 
 const limiter = rateLimit({
