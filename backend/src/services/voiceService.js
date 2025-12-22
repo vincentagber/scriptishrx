@@ -64,57 +64,67 @@ const activeCallers = new Map(); // streamSid -> { phoneNumber, tenantId }
 
 // Helper to save minute
 async function saveMeetingMinute(streamSid) {
-    const transcriptParts = activeTranscripts.get(streamSid);
-    if (!transcriptParts || transcriptParts.length === 0) {
-        activeTranscripts.delete(streamSid);
-        activeCallers.delete(streamSid);
+    // Get transcript or initialize empty
+    let transcriptParts = activeTranscripts.get(streamSid);
+    if (!transcriptParts) transcriptParts = []; // Safety check
+
+    const callerInfo = activeCallers.get(streamSid);
+    const tenantId = callerInfo?.tenantId;
+
+    // Cleanup active maps immediately to prevent double-processing
+    activeTranscripts.delete(streamSid);
+    activeCallers.delete(streamSid);
+
+    if (!tenantId) {
+        console.log('[VoiceService] No tenant ID found for stream, skipping save.');
         return;
     }
 
-    const fullTranscript = transcriptParts.join(' ');
-    const callerInfo = activeCallers.get(streamSid);
-
-    const tenantId = callerInfo?.tenantId;
-
-    console.log(`[VoiceService] Generating Minute for Stream ${streamSid}...`);
+    console.log(`[VoiceService] Finalizing Call Record for Stream ${streamSid}...`);
+    const fullTranscript = transcriptParts.join(' ').trim();
+    let contentToSave = "[Call Completed] Audio stream received.";
 
     try {
-        // 1. AI Summarization
-        const completion = await openai.chat.completions.create({
-            model: "gpt-4o",
-            messages: [
-                { role: "system", content: "You are an expert secretary. Convert the following call transcript into a professional meeting minute summary." },
-                { role: "user", content: fullTranscript }
-            ],
-        });
-        const summary = completion.choices[0].message.content;
-
-        if (tenantId) {
-            // 2. Find Client
-            let client = null;
-            if (callerInfo?.phoneNumber) {
-                client = await prisma.client.findFirst({
-                    where: { phone: callerInfo.phoneNumber, tenantId }
+        // 1. AI Summarization (Only if we have words)
+        if (fullTranscript.length > 10) {
+            try {
+                const completion = await openai.chat.completions.create({
+                    model: "gpt-4o",
+                    messages: [
+                        { role: "system", content: "You are an expert secretary. Convert the following call transcript into a professional meeting minute summary." },
+                        { role: "user", content: fullTranscript }
+                    ],
                 });
+                contentToSave = `[AI Generated Summary]\n\n${completion.choices[0].message.content}`;
+            } catch (aiError) {
+                console.error('[VoiceService] AI Summary failed (using raw text):', aiError);
+                contentToSave = `[Raw Transcript]\n\n${fullTranscript}`;
             }
-
-            // 3. Save to DB
-            await prisma.meetingMinute.create({
-                data: {
-                    tenantId,
-                    clientId: client ? client.id : undefined, // Link if client found
-                    content: `[AI Generated from Call]\n\n${summary}`,
-                    createdAt: new Date()
-                }
-            });
-            console.log('[VoiceService] Meeting Minute saved successfully.');
+        } else {
+            contentToSave = "[Call Completed] Audio connection successful. (No speech detected or transcription disabled)";
         }
+
+        // 2. Find Client
+        let client = null;
+        if (callerInfo?.phoneNumber) {
+            client = await prisma.client.findFirst({
+                where: { phone: callerInfo.phoneNumber, tenantId }
+            });
+        }
+
+        // 3. Save to DB
+        await prisma.meetingMinute.create({
+            data: {
+                tenantId,
+                clientId: client ? client.id : undefined, // Link if client found
+                content: contentToSave,
+                createdAt: new Date()
+            }
+        });
+        console.log('[VoiceService] Meeting Minute saved successfully.');
 
     } catch (err) {
         console.error('[VoiceService] Failed to save minute:', err);
-    } finally {
-        activeTranscripts.delete(streamSid);
-        activeCallers.delete(streamSid);
     }
 }
 
@@ -146,14 +156,19 @@ function handleConnection(ws, req) {
                     }
                     break;
                 case 'media':
-                    // Here we would receive base64 audio.
-                    // Here we would receive base64 audio.
-                    // TODO: Connect this stream to a Speech-to-Text service (e.g., Deepgram, OpenAI Realtime) 
-                    // to populate 'activeTranscripts' in real-time.
-                    // Currently, without an external STT provider, the transcript remains empty.
+                    // In a full production app, this is where we'd stream raw audio to Deepgram/OpenAI.
+                    // For this architecture without external STT subscriptions, we simply track that media is flowing.
+                    if (!activeTranscripts.has(streamSid)) {
+                        activeTranscripts.set(streamSid, []);
+                    }
+                    // We only log occasionally to avoid flooding console
+                    if (Math.random() < 0.01) {
+                        // console.log(`[Twilio] Stream ${streamSid} is receiving audio packets...`);
+                    }
                     break;
                 case 'stop':
                     console.log(`[Twilio] Stream stopped: ${msg.stop.streamSid}`);
+                    // Mark as stopped to prevent duplicate saves if 'close' fires immediately after
                     await saveMeetingMinute(msg.stop.streamSid);
                     break;
             }
@@ -164,7 +179,10 @@ function handleConnection(ws, req) {
 
     ws.on('close', () => {
         console.log('[VoiceService] Stream disconnected');
-        if (streamSid) saveMeetingMinute(streamSid);
+        // socket close often happens after stop, but good fallback
+        if (streamSid && activeTranscripts.has(streamSid)) {
+            saveMeetingMinute(streamSid);
+        }
     });
 
     ws.on('error', (err) => {

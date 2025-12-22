@@ -516,8 +516,29 @@ router.patch('/info',
             if (customSystemPrompt !== undefined) updateData.customSystemPrompt = customSystemPrompt;
 
             // New JSON Configs
-            if (aiConfig !== undefined) updateData.aiConfig = aiConfig;
-            if (twilioConfig !== undefined) updateData.twilioConfig = twilioConfig;
+            if (aiConfig !== undefined) {
+                // VALIDATION: Prevent empty saves
+                if (!aiConfig.aiName || !aiConfig.aiName.trim()) {
+                    return res.status(400).json({ success: false, error: 'AI Name is required' });
+                }
+                if (!aiConfig.welcomeMessage || !aiConfig.welcomeMessage.trim()) {
+                    return res.status(400).json({ success: false, error: 'Welcome Message is required' });
+                }
+                if (!aiConfig.systemPrompt || !aiConfig.systemPrompt.trim()) {
+                    return res.status(400).json({ success: false, error: 'System Instructions are required' });
+                }
+                updateData.aiConfig = aiConfig;
+            }
+
+            if (twilioConfig !== undefined) {
+                if (twilioConfig.phoneNumber && !twilioConfig.phoneNumber.trim()) {
+                    return res.status(400).json({ success: false, error: 'Twilio Phone Number cannot be empty' });
+                }
+                // Merge with existing config if needed, but for now we replace or update
+                // Prisma JSON updates can be partial depending on DB adapter, but typically it overrides the field.
+                // It is safer to fetch first and merge, but simple replacement is expected here for settings forms.
+                updateData.twilioConfig = twilioConfig;
+            }
 
             const tenant = await prisma.tenant.update({
                 where: { id: tenantId },

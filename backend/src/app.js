@@ -86,9 +86,7 @@ const voiceCakeRouter = null;
 // ==================== HELPER FUNCTIONS ====================
 
 // NOTE: Demo/fallback/mock routers removed for production readiness.
-// If a route module is missing, the server will not register a mock replacement.
-// This ensures missing integrations fail loudly during deployment rather than silently
-// serving demo data to end users.
+
 
 // ==================== REGISTER ALL ROUTES ====================
 
