@@ -59,8 +59,8 @@ async function runAudit() {
             CallSid: 'CA_TEST'
         });
 
-        if (twiml.includes('Ahoy matey!')) {
-            console.log('   ✅ TwiML contains custom welcome message ("Ahoy matey!").');
+        if (twiml.includes('<Stream url="wss://')) {
+            console.log('   ✅ TwiML contains Media Stream connection (Correct for Real-time AI).');
         } else {
             console.error('   ❌ TwiML did NOT match expected config:', twiml);
         }
