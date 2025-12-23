@@ -64,8 +64,18 @@ async function addToHistory(tenantId, role, content, metadata = {}) {
 /**
  * Call OpenAI API for chat completion
  */
+const OpenAI = require('openai');
+
+// Initialize OpenAI Client
+const openai = hasOpenAI ? new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY
+}) : null;
+
+/**
+ * Call OpenAI API for chat completion
+ */
 async function callOpenAI(message, tenantId) {
-    if (!hasOpenAI) {
+    if (!hasOpenAI || !openai) {
         throw new Error('OpenAI API key not configured. Cannot process chat request.');
     }
 
@@ -107,37 +117,14 @@ async function callOpenAI(message, tenantId) {
 
         console.log('[OpenAI] Sending request with', openaiMessages.length, 'messages');
 
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                model: aiConfig.model || process.env.OPENAI_MODEL || 'gpt-3.5-turbo',
-                messages: openaiMessages,
-                max_tokens: aiConfig.maxTokens || 500,
-                temperature: aiConfig.temperature || 0.7
-            })
+        const completion = await openai.chat.completions.create({
+            model: aiConfig.model || process.env.OPENAI_MODEL || 'gpt-3.5-turbo',
+            messages: openaiMessages,
+            max_tokens: aiConfig.maxTokens || 500,
+            temperature: aiConfig.temperature || 0.7
         });
 
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error('[OpenAI] API Error Response:', errorText);
-
-            let errorMessage = `OpenAI API error: ${response.status}`;
-            try {
-                const errorData = JSON.parse(errorText);
-                errorMessage = errorData.error?.message || errorMessage;
-            } catch (e) {
-                // If can't parse error, use status text
-            }
-
-            throw new Error(errorMessage);
-        }
-
-        const data = await response.json();
-        const aiResponse = data.choices[0]?.message?.content;
+        const aiResponse = completion.choices[0]?.message?.content;
 
         if (!aiResponse) {
             throw new Error('No response from OpenAI');
@@ -149,8 +136,8 @@ async function callOpenAI(message, tenantId) {
             success: true,
             response: aiResponse,
             provider: 'openai',
-            model: data.model,
-            usage: data.usage
+            model: completion.model,
+            usage: completion.usage
         };
     } catch (error) {
         console.error('[OpenAI] Error:', error);
