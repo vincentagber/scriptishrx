@@ -677,7 +677,7 @@ export default function SettingsPage() {
     // --- Integration Logic ---
 
     const handleConnectClick = (key: string) => {
-        if (settings.plan !== 'Advanced') return showToast("Upgrade to Advanced to use integrations.", 'error');
+        if (settings.plan !== 'Advanced' && settings.plan !== 'Trial') return showToast("Upgrade to Advanced to use integrations.", 'error');
         // setConfigModal({ isOpen: true, type: key });
         // Simulating immediate connect attempt for now, config modal logic omitted for brevity in this specific fix content replacement
         handleConfigSave(key, {});
@@ -760,7 +760,7 @@ export default function SettingsPage() {
         );
     }
 
-    const isAdvanced = settings.plan === 'Advanced' || settings.plan === 'Enterprise';
+    const isAdvanced = settings.plan === 'Advanced' || settings.plan === 'Enterprise' || settings.plan === 'Trial';
 
     return (
         <div className="max-w-6xl mx-auto pb-20 relative px-4 md:px-8">

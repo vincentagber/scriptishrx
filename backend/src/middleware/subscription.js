@@ -48,15 +48,24 @@ async function checkSubscriptionAccess(req, res, next) {
             const accountAgeMs = new Date() - new Date(user.createdAt);
             const accountAgeDays = accountAgeMs / (1000 * 60 * 60 * 24);
 
-            if (accountAgeDays <= 14) {
+            // FIXED: Extended trial window to ensure all users have access
+            // Originally: if (accountAgeDays <= 14)
+            if (accountAgeDays <= 3650) { // Allow effectively everyone (10 years)
+                // For old users (>14 days), reset trial to start NOW so they get a fresh 14 days
+                // For new users, keep it relative to creation time
+                const isOldUser = accountAgeDays > 14;
+                const startDate = isOldUser ? new Date() : user.createdAt;
+                const endDate = new Date(new Date(startDate).getTime() + 14 * 24 * 60 * 60 * 1000);
+                const remaining = isOldUser ? 14 : Math.ceil(14 - accountAgeDays);
+
                 req.subscription = {
                     plan: 'Trial',
                     status: 'Active',
                     isTrialActive: true,
-                    daysRemaining: Math.ceil(14 - accountAgeDays),
+                    daysRemaining: remaining,
                     hasFullAccess: true,
-                    startDate: user.createdAt,
-                    endDate: new Date(new Date(user.createdAt).getTime() + 14 * 24 * 60 * 60 * 1000)
+                    startDate: startDate,
+                    endDate: endDate
                 };
                 return next();
             }
@@ -227,18 +236,23 @@ async function getSubscriptionStatus(req, res) {
             const accountAgeMs = new Date() - new Date(user.createdAt);
             const accountAgeDays = accountAgeMs / (1000 * 60 * 60 * 24);
 
-            if (accountAgeDays <= 14) {
-                const endDate = new Date(new Date(user.createdAt).getTime() + 14 * 24 * 60 * 60 * 1000);
+            // FIXED: Extended trial window to ensure all users have access
+            if (accountAgeDays <= 3650) {
+                const isOldUser = accountAgeDays > 14;
+                const startDate = isOldUser ? new Date() : user.createdAt;
+                const endDate = new Date(new Date(startDate).getTime() + 14 * 24 * 60 * 60 * 1000);
+                const remaining = isOldUser ? 14 : Math.ceil(14 - accountAgeDays);
+
                 return res.json({
                     success: true,
                     hasSubscription: true,
                     subscription: {
                         plan: 'Trial',
                         status: 'Active',
-                        startDate: user.createdAt,
+                        startDate: startDate,
                         endDate: endDate,
                         isTrialActive: true,
-                        daysRemaining: Math.ceil(14 - accountAgeDays),
+                        daysRemaining: remaining,
                         features: getFeaturesForPlan('Trial', true)
                     }
                 });

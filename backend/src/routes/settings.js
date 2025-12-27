@@ -228,7 +228,8 @@ router.put('/tenant',
 
             // Enforce plan limits for custom system prompt
             if (customSystemPrompt !== undefined) {
-                if (currentTenant.plan === 'Advanced') {
+                // FIXED: Allow Trial plan (implied full access) to also set custom prompts
+                if (currentTenant.plan === 'Advanced' || currentTenant.plan === 'Trial') {
                     // SECURITY: Validate and sanitize prompt
                     const sanitizedPrompt = validateSystemPrompt(customSystemPrompt);
                     updateData.customSystemPrompt = sanitizedPrompt;
@@ -314,7 +315,7 @@ router.put('/integrations',
                 where: { id: tenantId }
             });
 
-            if (tenant.plan !== 'Advanced') {
+            if (tenant.plan !== 'Advanced' && tenant.plan !== 'Trial') {
                 return res.status(403).json({
                     success: false,
                     error: 'Integrations require Advanced plan',

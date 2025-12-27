@@ -566,22 +566,6 @@ export const Footer = () => {
 
     return (
         <footer id="contact" className="bg-slate-900 text-white py-12 md:py-20 border-t border-slate-800 relative">
-            {activeModal === 'privacy' && (
-                <Modal title="Privacy Policy & Terms" onClose={() => setActiveModal(null)}>
-                    <h4 className="font-bold text-slate-900 text-lg">1. Privacy Policy</h4>
-                    <p>At ScriptishRx, we take your privacy seriously. We collect minimal data necessary to provide our services, including business metrics and user preferences. Your data is encrypted and stored securely using SOC2 Type II compliant standards.</p>
-                    <p>We do not sell your personal data to third parties. We use trusted third-party processors (like Stripe for payments and OpenAI for AI features) solely to deliver our core services.</p>
-
-                    <h4 className="font-bold text-slate-900 text-lg mt-6">2. Terms of Service</h4>
-                    <p>By using ScriptishRx, you agree to secure your account credentials and use the platform for lawful business purposes only. We reserve the right to terminate accounts that violate our usage policies.</p>
-
-                    <h4 className="font-bold text-slate-900 text-lg mt-6">3. Intellectual Property Rights</h4>
-                    <p>© {new Date().getFullYear()} ScriptishRx LLC. All rights reserved.</p>
-                    <p>The ScriptishRx platform, including its code, design, logos, and AI algorithms, is the exclusive intellectual property of ScriptishRx LLC. Unauthorized reproduction, reverse engineering, or redistribution of our software is strictly prohibited.</p>
-                    <p>Business data you input into the system remains your property. You grant us a limited license to process this data solely for providing the service to you.</p>
-                </Modal>
-            )}
-
             {activeModal === 'sitemap' && (
                 <Modal title="Sitemap" onClose={() => setActiveModal(null)}>
                     <div className="grid grid-cols-2 gap-4">
@@ -605,9 +589,8 @@ export const Footer = () => {
                         <div className="col-span-2">
                             <h4 className="font-bold text-slate-900 mb-2">Legal</h4>
                             <ul className="space-y-2">
-                                <li><button onClick={() => setActiveModal('privacy')} className="text-primary-start hover:underline">Privacy Policy</button></li>
-                                <li><button onClick={() => setActiveModal('privacy')} className="text-primary-start hover:underline">Terms of Service</button></li>
-                                <li><button onClick={() => setActiveModal('privacy')} className="text-primary-start hover:underline">Intellectual Property</button></li>
+                                <li><a href="/legal#privacy" className="text-primary-start hover:underline">Privacy Policy</a></li>
+                                <li><a href="/legal#ip-rights" className="text-primary-start hover:underline">Intellectual Property</a></li>
                             </ul>
                         </div>
                     </div>
@@ -646,9 +629,8 @@ export const Footer = () => {
                         <h4 className="font-bold mb-6 text-lg">Company</h4>
                         <ul className="space-y-4 text-slate-400">
                             <li><a href="#" className="hover:text-white transition-colors">About Us</a></li>
-                            <li><button onClick={() => setActiveModal('privacy')} className="hover:text-white transition-colors text-left">Privacy Policy</button></li>
-                            <li><button onClick={() => setActiveModal('privacy')} className="hover:text-white transition-colors text-left">Terms of Service</button></li>
-                            <li><button onClick={() => setActiveModal('privacy')} className="hover:text-white transition-colors text-left">IP Rights</button></li>
+                            <li><a href="/legal#privacy" className="hover:text-white transition-colors text-left">Privacy Policy</a></li>
+                            <li><a href="/legal#ip-rights" className="hover:text-white transition-colors text-left">IP Rights</a></li>
                         </ul>
                     </div>
 
@@ -673,7 +655,7 @@ export const Footer = () => {
                 <div className="pt-8 border-t border-slate-800 text-center text-slate-500 text-sm flex flex-col md:flex-row justify-between items-center gap-4">
                     <span>© {new Date().getFullYear()} ScriptishRx LLC. All rights reserved.</span>
                     <div className="flex gap-6">
-                        <button onClick={() => setActiveModal('privacy')} className="hover:text-white transition-colors">Privacy & Terms</button>
+                        <a href="/legal" className="hover:text-white transition-colors">Privacy & Terms</a>
                         <button onClick={() => setActiveModal('sitemap')} className="hover:text-white transition-colors">Sitemap</button>
                     </div>
                 </div>
