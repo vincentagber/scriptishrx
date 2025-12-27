@@ -1,26 +1,13 @@
-'use client';
-
 import React from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Shield, FileText, Lock, Globe } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
+import { Shield, Lock } from 'lucide-react';
+import { Navbar } from '@/components/layout/Navbar';
+import { Footer } from '@/components/features/LandingContent';
 
 export default function LegalPage() {
     return (
         <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
-            {/* Header / Nav similar to main page but simplified */}
-            <nav className="sticky top-0 w-full z-50 px-4 md:px-6 py-4 bg-white/80 backdrop-blur-md border-b border-slate-200">
-                <div className="container mx-auto flex justify-between items-center">
-                    <Link href="/" className="flex items-center gap-2 group">
-                        <ArrowLeft className="w-5 h-5 text-slate-500 group-hover:text-primary-start transition-colors" />
-                        <span className="font-semibold text-slate-700 group-hover:text-primary-start transition-colors">Back to Home</span>
-                    </Link>
-                    <div className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-800 to-slate-600">
-                        Legal Center
-                    </div>
-                    <div className="w-20"></div> {/* Spacer for center alignment */}
-                </div>
-            </nav>
+            <Navbar />
 
             <main className="container mx-auto px-4 py-12 md:py-16">
                 <div className="max-w-4xl mx-auto space-y-16">
@@ -176,9 +163,7 @@ export default function LegalPage() {
                 </div>
             </main>
 
-            <footer className="py-8 text-center text-slate-400 text-sm border-t border-slate-200 bg-white">
-                <p>&copy; {new Date().getFullYear()} ScriptishRx LLC. All rights reserved.</p>
-            </footer>
+            <Footer />
         </div>
     );
 }
