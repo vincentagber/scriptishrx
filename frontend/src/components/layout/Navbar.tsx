@@ -37,7 +37,7 @@ export const Navbar = () => {
 
                 {/* Mobile Hamburger */}
                 <button
-                    className="md:hidden relative z-50 p-2 text-slate-600"
+                    className="md:hidden relative z-50 p-2 text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
                     onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                 >
                     {mobileMenuOpen ? <X /> : <Menu />}
@@ -52,7 +52,7 @@ export const Navbar = () => {
                 {/* Backdrop */}
                 <div
                     className={cn(
-                        "absolute inset-0 bg-slate-900/20 backdrop-blur-sm transition-opacity duration-300",
+                        "absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity duration-300",
                         mobileMenuOpen ? "opacity-100" : "opacity-0"
                     )}
                     onClick={() => setMobileMenuOpen(false)}
@@ -60,79 +60,76 @@ export const Navbar = () => {
 
                 {/* Drawer */}
                 <div className={cn(
-                    "absolute right-0 top-0 h-full w-[85vw] max-w-sm bg-white shadow-2xl transition-transform duration-300 ease-out flex flex-col",
+                    "absolute right-0 top-0 h-full w-[85vw] max-w-xs bg-white shadow-2xl transition-transform duration-300 ease-out flex flex-col",
                     mobileMenuOpen ? "translate-x-0" : "translate-x-full"
                 )}>
-                    {/* Drawer Header */}
-                    <div className="flex items-center justify-between p-6 border-b border-slate-100">
-                        <img src="/logo.jpg" alt="ScriptishRx" className="h-10 w-auto" />
-                        <button
-                            onClick={() => setMobileMenuOpen(false)}
-                            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
-                        >
-                            <X className="w-6 h-6" />
-                        </button>
+                    {/* Drawer Header (User Profile Placeholder) */}
+                    <div className="flex flex-col gap-4 p-6 bg-slate-50 border-b border-slate-100">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center text-slate-500">
+                                    <span className="font-bold text-lg">?</span>
+                                </div>
+                                <div>
+                                    <p className="text-sm font-bold text-slate-900">Welcome</p>
+                                    <p className="text-xs text-slate-500">Guest User</p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setMobileMenuOpen(false)}
+                                className="p-2 -mr-2 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded-full transition-colors"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
                     </div>
 
                     {/* Drawer Content */}
-                    <div className="flex-1 overflow-y-auto py-6 px-6 space-y-8">
-                        {/* Auth Actions (Prominent) */}
-                        <div className="flex flex-col gap-3">
+                    <div className="flex-1 overflow-y-auto">
+                        {/* Auth CTA Section */}
+                        <div className="p-6 border-b border-slate-100 space-y-3">
                             <Link href="/register" onClick={() => setMobileMenuOpen(false)}>
-                                <Button className="w-full h-12 text-base font-semibold bg-primary-start hover:brightness-110 shadow-lg shadow-primary-start/20 rounded-xl">
+                                <Button className="w-full text-base font-bold bg-purple-600 hover:bg-purple-700 text-white shadow-md">
                                     Join for Free
                                 </Button>
                             </Link>
                             <Link href="/login" onClick={() => setMobileMenuOpen(false)}>
-                                <Button variant="outline" className="w-full h-12 text-base font-medium border-slate-200 text-slate-700 hover:text-slate-900 hover:bg-slate-50 rounded-xl">
+                                <Button variant="outline" className="w-full text-base font-bold border-slate-300 text-slate-700 hover:bg-slate-50 hover:text-slate-900">
                                     Log in
                                 </Button>
                             </Link>
                         </div>
 
                         {/* Navigation Links */}
-                        <div className="flex flex-col space-y-2">
-                            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Menu</p>
-                            <Link
-                                href="/#features"
-                                onClick={() => setMobileMenuOpen(false)}
-                                className="flex items-center justify-between p-3 -mx-3 text-slate-700 font-medium hover:bg-slate-50 hover:text-primary-start rounded-lg transition-colors"
-                            >
-                                Platform
-                            </Link>
-                            <Link
-                                href="/#solutions"
-                                onClick={() => setMobileMenuOpen(false)}
-                                className="flex items-center justify-between p-3 -mx-3 text-slate-700 font-medium hover:bg-slate-50 hover:text-primary-start rounded-lg transition-colors"
-                            >
-                                Solutions
-                            </Link>
-                            <Link
-                                href="/#pricing"
-                                onClick={() => setMobileMenuOpen(false)}
-                                className="flex items-center justify-between p-3 -mx-3 text-slate-700 font-medium hover:bg-slate-50 hover:text-primary-start rounded-lg transition-colors"
-                            >
-                                Pricing
-                            </Link>
-                            <Link
-                                href="/legal"
-                                onClick={() => setMobileMenuOpen(false)}
-                                className="flex items-center justify-between p-3 -mx-3 text-slate-700 font-medium hover:bg-slate-50 hover:text-primary-start rounded-lg transition-colors"
-                            >
-                                Legal
-                            </Link>
-                            <Link
-                                href="/#contact"
-                                onClick={() => setMobileMenuOpen(false)}
-                                className="flex items-center justify-between p-3 -mx-3 text-slate-700 font-medium hover:bg-slate-50 hover:text-primary-start rounded-lg transition-colors"
-                            >
-                                Contact
-                            </Link>
+                        <div className="py-2">
+                            <p className="px-6 py-3 text-xs font-bold text-slate-400 uppercase tracking-wider">Explore</p>
+                            <div className="flex flex-col">
+                                {[
+                                    { label: 'Platform Features', href: '/#features' },
+                                    { label: 'Solutions', href: '/#solutions' },
+                                    { label: 'Pricing Plans', href: '/#pricing' },
+                                    { label: 'Legal Center', href: '/legal' },
+                                    { label: 'Contact Support', href: '/#contact' }
+                                ].map((item) => (
+                                    <Link
+                                        key={item.label}
+                                        href={item.href}
+                                        onClick={() => setMobileMenuOpen(false)}
+                                        className="flex items-center justify-between px-6 py-4 text-slate-700 hover:bg-slate-50 hover:text-purple-600 transition-colors group border-l-4 border-transparent hover:border-purple-600"
+                                    >
+                                        <span className="font-medium">{item.label}</span>
+                                        <span className="text-slate-300 group-hover:text-purple-600 transition-colors">›</span>
+                                    </Link>
+                                ))}
+                            </div>
                         </div>
-                        <div className="pt-6 border-t border-slate-100">
-                            <p className="text-xs text-slate-400 text-center">
-                                © {new Date().getFullYear()} ScriptishRx LLC.
-                            </p>
+                    </div>
+
+                    {/* Drawer Footer */}
+                    <div className="p-6 border-t border-slate-100 bg-slate-50">
+                        <div className="flex items-center gap-2 text-sm text-slate-500 font-medium cursor-pointer hover:text-slate-900">
+                            <span className="w-5 h-5 rounded-full border border-slate-300 flex items-center justify-center text-[10px]">🌐</span>
+                            <span>English</span>
                         </div>
                     </div>
                 </div>
