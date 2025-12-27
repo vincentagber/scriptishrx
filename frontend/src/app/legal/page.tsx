@@ -9,7 +9,7 @@ export default function LegalPage() {
         <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
             <Navbar />
 
-            <main className="container mx-auto px-4 py-12 md:py-16">
+            <main className="container mx-auto px-4 pt-32 pb-12">
                 <div className="max-w-4xl mx-auto space-y-16">
 
                     {/* Header Section */}
