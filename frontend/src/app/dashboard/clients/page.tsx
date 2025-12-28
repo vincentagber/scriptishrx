@@ -45,8 +45,13 @@ export default function ClientsPage() {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (res.ok) {
-                const data = await res.json();
-                setClients(data);
+                const contentType = res.headers.get("content-type");
+                if (contentType && contentType.includes("application/json")) {
+                    const data = await res.json();
+                    setClients(data);
+                } else {
+                    console.error('Received non-JSON response from API');
+                }
             }
         } catch (error) {
             console.error('Error fetching clients:', error);

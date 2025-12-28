@@ -45,7 +45,14 @@ export default function BookingsPage() {
             const res = await fetch('/api/bookings', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-            if (res.ok) setBookings(await res.json());
+            if (res.ok) {
+                const contentType = res.headers.get("content-type");
+                if (contentType && contentType.includes("application/json")) {
+                    setBookings(await res.json());
+                } else {
+                    console.error('Received non-JSON response from API');
+                }
+            }
         } catch (error) {
             console.error('Error fetching bookings:', error);
         }
@@ -58,7 +65,12 @@ export default function BookingsPage() {
             const res = await fetch('/api/clients', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-            if (res.ok) setClients(await res.json());
+            if (res.ok) {
+                const contentType = res.headers.get("content-type");
+                if (contentType && contentType.includes("application/json")) {
+                    setClients(await res.json());
+                }
+            }
         } catch (error) {
             console.error('Error fetching clients:', error);
         }
