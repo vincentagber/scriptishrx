@@ -94,9 +94,6 @@ router.post('/portal', async (req, res) => {
     }
 });
 
-// Mock PayPal (Keep for completeness)
-router.post('/paypal/create-order', async (req, res) => {
-    res.json({ id: `mock_paypal_order_${Date.now()}`, status: 'CREATED' });
-});
+// Mock PayPal removed for production security
 
 module.exports = router;

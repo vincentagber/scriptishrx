@@ -6,6 +6,9 @@ const path = require('path');
 const fs = require('fs');
 const helmet = require('helmet');
 const hpp = require('hpp');
+const crypto = require('crypto');
+const AppError = require('./utils/AppError');
+const globalErrorHandler = require('./middleware/errorHandler');
 
 const app = express();
 
@@ -30,6 +33,13 @@ app.use(helmet({
     crossOriginEmbedderPolicy: false // Keep disabled for now if using 3rd party assets not CORP compatible yet
 })); // Secure HTTP headers (Relaxed for API)
 app.use(hpp());    // Prevent HTTP Parameter Pollution
+
+// OBSERVABILITY: Add Correlation ID to valid requests
+app.use((req, res, next) => {
+    req.id = req.headers['x-request-id'] || crypto.randomUUID();
+    res.setHeader('X-Request-Id', req.id);
+    next();
+});
 
 app.use(cors({
     origin: [
@@ -262,12 +272,17 @@ app.use((req, res) => {
 // Global Error Handler
 app.use((err, req, res, next) => {
     console.error('Server error:', err);
-    res.status(err.status || 500).json({
+
+    const statusCode = err.statusCode || 500;
+    const status = err.status || 'error';
+
+    res.status(statusCode).json({
         success: false,
-        error: err.message || 'Internal server error',
-        ...(process.env.NODE_ENV === 'development' && {
-            stack: err.stack
-        })
+        status: status,
+        error: err.message,
+        code: err.code || 'INTERNAL_ERROR',
+        requestId: req.id,
+        ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
     });
 });
 

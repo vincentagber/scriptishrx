@@ -83,6 +83,17 @@ class PaymentService {
         // userId might be null if created outside app, handle safely if needed
         if (!userId) return;
 
+        // IDEMPOTENCY CHECK: Avoid duplicate activation for same period
+        // Just checking userId isn't enough as they might resubscribe later
+        // But for "Completed" event, we check if we just did this.
+        const existingSub = await prisma.subscription.findUnique({ where: { userId } });
+
+        // If already active and start date is very recent (< 5 mins), ignore this webhook
+        if (existingSub && existingSub.status === 'Active' && (Date.now() - new Date(existingSub.updatedAt).getTime() < 5 * 60 * 1000)) {
+            console.log(`[Payment] Idempotency Cache Hit: Subscription for ${userId} already processed recently.`);
+            return;
+        }
+
         await prisma.subscription.upsert({
             where: { userId },
             update: {
@@ -102,7 +113,7 @@ class PaymentService {
                 endDate: new Date(new Date().setMonth(new Date().getMonth() + 1))
             }
         });
-        console.log(`✅ Receipt Validated & Subscription Activated for User ${userId}`);
+        console.log(`✅ [Payment] STATE TRANSITION: Confirmed -> Settled (User: ${userId}, Plan: ${plan})`);
     }
 
     // Stub implementations for others

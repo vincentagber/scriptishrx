@@ -8,6 +8,13 @@ const { checkPermission, verifyTenantAccess } = require('../middleware/permissio
 const { checkSubscriptionAccess } = require('../middleware/subscription');
 const { createBookingSchema, updateBookingSchema } = require('../schemas/validation');
 
+const idempotency = require('../middleware/idempotency');
+const { checkFeature } = require('../config/features');
+const AppError = require('../utils/AppError');
+
+// GLOBAL: Check feature enabled
+router.use(checkFeature('BOOKINGS'));
+
 /**
  * GET /api/bookings - List all bookings for the tenant
  */
@@ -61,46 +68,61 @@ router.get('/',
  * POST /api/bookings - Create a new booking
  */
 router.post('/',
+    idempotency, // Enable idempotency
     authenticateToken,
     verifyTenantAccess,
     checkSubscriptionAccess,
     checkPermission('bookings', 'create'),
-    async (req, res) => {
+    async (req, res, next) => {
         try {
             const tenantId = req.scopedTenantId;
             const validatedData = createBookingSchema.parse(req.body);
             const { clientId, date, purpose, status } = validatedData;
 
-            // Verify client belongs to tenant
-            const client = await prisma.client.findFirst({
-                where: { id: clientId, tenantId }
-            });
+            const bookingDate = new Date(date);
+            const endTime = new Date(bookingDate.getTime() + 60 * 60 * 1000);
 
-            if (!client) {
-                return res.status(404).json({
-                    success: false,
-                    error: 'Client not found in your organization'
+            // TRANSACTION: Conflict Check + Create
+            const booking = await prisma.$transaction(async (tx) => {
+                // 1. Check Client Existence
+                const client = await tx.client.findFirst({
+                    where: { id: clientId, tenantId }
                 });
-            }
 
-            const booking = await prisma.booking.create({
-                data: {
-                    clientId,
-                    date: new Date(date),
-                    purpose: purpose || '',
-                    status: status || 'Scheduled',
-                    tenantId
-                },
-                include: {
-                    client: {
-                        select: {
-                            id: true,
-                            name: true,
-                            phone: true,
-                            email: true
-                        }
-                    }
+                if (!client) {
+                    throw new AppError('Client not found', 404);
                 }
+
+                // 2. Strict Conflict Check (with lock implication via serial execution in tx if isolation level supports it, 
+                // but prisma $transaction ensures atomic operations at minimum)
+                const conflictingBooking = await tx.booking.findFirst({
+                    where: {
+                        tenantId,
+                        date: {
+                            gte: new Date(bookingDate.getTime() - 60 * 60 * 1000 + 1),
+                            lt: endTime
+                        },
+                        status: { not: 'Cancelled' }
+                    }
+                });
+
+                if (conflictingBooking) {
+                    throw new AppError('Slot is already booked', 409, 'BOOKING_CONFLICT');
+                }
+
+                // 3. Create Booking
+                return await tx.booking.create({
+                    data: {
+                        clientId,
+                        date: bookingDate,
+                        purpose: purpose || '',
+                        status: status || 'Scheduled',
+                        tenantId
+                    },
+                    include: {
+                        client: { select: { id: true, name: true, phone: true, email: true } }
+                    }
+                });
             });
 
             res.status(201).json({
@@ -109,11 +131,7 @@ router.post('/',
                 message: 'Booking created successfully'
             });
         } catch (error) {
-            console.error('Error creating booking:', error);
-            res.status(500).json({
-                success: false,
-                error: 'Failed to create booking'
-            });
+            next(error); // Pass to global error handler
         }
     }
 );

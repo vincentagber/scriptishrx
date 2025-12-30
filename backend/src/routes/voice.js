@@ -7,8 +7,10 @@ const { authenticateToken } = require('../middleware/auth');
 const { checkPermission, verifyTenantAccess } = require('../middleware/permissions');
 const { checkSubscriptionAccess, checkFeature } = require('../middleware/subscription');
 const { voiceLimiter } = require('../middleware/rateLimiting');
+const { checkFeature: checkGlobalFeature } = require('../config/features');
 
-// Mock Mode removed for production
+// GLOBAL LOCK
+router.use(checkGlobalFeature('VOICE_AGENTS'));
 
 
 /**
