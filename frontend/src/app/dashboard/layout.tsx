@@ -207,26 +207,26 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {/* === SIDEBAR === */}
             <aside
                 ref={sidebarRef}
-                className={`fixed lg:static top-0 left-0 h-full lg:h-auto w-64 bg-blue-600 z-50
-                transition-transform duration-300 flex flex-col shadow-xl
+                className={`fixed lg:static top-0 left-0 h-full lg:h-auto w-64 bg-white border-r border-gray-100 z-50
+                transition-transform duration-300 flex flex-col
                 ${showMobileMenu ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
             >
                 {/* Brand */}
-                <div className="h-20 flex items-center px-6">
-                    <div className="flex items-center gap-3 text-white">
-                        <img src="/logo.jpg" alt="ScriptishRx" className="h-14 w-auto rounded-lg" />
+                <div className="h-24 flex items-center px-8">
+                    <div className="flex items-center gap-3">
+                        <img src="/logo.jpg" alt="ScriptishRx" className="h-10 w-auto" />
                     </div>
 
                     <button
                         onClick={() => setShowMobileMenu(false)}
-                        className="lg:hidden ml-auto text-white"
+                        className="lg:hidden ml-auto text-gray-500"
                     >
                         <X className="h-6 w-6" />
                     </button>
                 </div>
 
                 {/* Navigation */}
-                <nav className="flex-1 px-4 py-4 space-y-8 overflow-y-auto scrollbar-hide">
+                <nav className="flex-1 px-6 py-4 space-y-8 overflow-y-auto scrollbar-hide">
 
                     <Section title="MENU">
                         <NavItem href="/dashboard" label="Dashboard" icon={<LayoutDashboard />} active={pathname === '/dashboard'} />
@@ -243,21 +243,35 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     </Section>
 
                     <Section title="GENERAL">
-                        <NavItem href="/dashboard/settings" label="My Profile" icon={<User />} active={pathname === '/dashboard/settings'} />
-                        <NavItem href="/dashboard/settings/subscription" label="Subscription" icon={<Zap />} active={pathname.includes('subscription')} badge="Pro" />
-                    </Section>
-
-                    {/* Visible Logout */}
-                    <div className="mt-8 pt-4 border-t border-blue-500/30">
+                        <NavItem href="/dashboard/settings" label="Settings" icon={<Settings />} active={pathname === '/dashboard/settings'} />
                         <button
                             onClick={logout}
-                            className="flex items-center gap-3 px-4 py-3 w-full text-blue-100 hover:text-white hover:bg-white/10 rounded-xl transition-all duration-200"
+                            className="flex items-center px-3 py-2 w-full text-gray-500 hover:text-gray-900 transition-colors group"
                         >
-                            <LogOut className="w-5 h-5" />
-                            <span className="font-medium text-sm">Logout</span>
+                            <span className="mr-3 p-1"><LogOut className="w-5 h-5 text-gray-400 group-hover:text-gray-600" /></span>
+                            <span className="font-medium text-sm">Log out</span>
                         </button>
-                    </div>
+                    </Section>
                 </nav>
+
+                {/* Upgrade Pro Card - EXACT DESIGN MATCH */}
+                <div className="p-6">
+                    <div className="bg-[#059669] rounded-2xl p-5 text-center shadow-lg transform transition-all hover:scale-[1.02]">
+                        <div className="mb-3 flex justify-center">
+                            <span className="text-2xl filter drop-shadow-md">👑</span>
+                        </div>
+                        <h3 className="text-white font-bold text-lg mb-1">Upgrade Pro!</h3>
+                        <p className="text-white/80 text-xs mb-4 leading-relaxed px-1">
+                            Higher productivity with better organization
+                        </p>
+                        <Link href="/dashboard/settings/subscription" className="block w-full">
+                            <button className="w-full bg-white text-[#059669] py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 shadow-sm hover:shadow-md transition-all active:scale-95">
+                                <Zap className="w-4 h-4 fill-current" />
+                                Upgrade
+                            </button>
+                        </Link>
+                    </div>
+                </div>
             </aside>
 
             {/* === MAIN === */}
@@ -426,8 +440,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
     return (
-        <div className="mb-2">
-            <p className="px-4 text-[10px] font-bold text-blue-200/60 uppercase tracking-widest mb-2">{title}</p>
+        <div className="mb-6">
+            <p className="px-3 text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">{title}</p>
             <div className="space-y-1">{children}</div>
         </div>
     );
@@ -449,21 +463,21 @@ function NavItem({
     return (
         <Link
             href={href}
-            className={`flex items-center justify-between px-4 py-3 mx-2 rounded-xl transition-all duration-200 group relative
+            className={`flex items-center justify-between px-3 py-2.5 rounded-lg transition-all duration-200 group relative
             ${active
-                    ? 'bg-white text-blue-600 shadow-lg' // Active: White pill, blue text
-                    : 'text-blue-100 hover:bg-white/10 hover:text-white' // Inactive: Light blue text
+                    ? 'bg-blue-50 text-blue-600'
+                    : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
                 }`}
         >
             <div className="flex items-center gap-3">
-                <span className={`${active ? 'text-blue-800' : 'text-blue-200 group-hover:text-white'} transition-colors`}>
+                <span className={`${active ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-600'} transition-colors`}>
                     {icon}
                 </span>
                 <span className="font-medium text-sm">{label}</span>
             </div>
 
             {badge && (
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm ${active ? 'bg-blue-100 text-blue-600' : 'bg-blue-500 text-white'}`}>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm ${active ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'}`}>
                     {badge}
                 </span>
             )}
