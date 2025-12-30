@@ -470,7 +470,7 @@ export default function VoicePage() {
                                             placeholder="+1 (555) 000-0000"
                                             value={phoneNumber}
                                             onChange={(e) => setPhoneNumber(e.target.value)}
-                                            className="h-11 bg-white border-gray-300 text-gray-900"
+                                            className="h-11 bg-gray-50 border border-gray-300 text-gray-900 placeholder:text-gray-400 focus-visible:ring-green-500 rounded-xl px-4"
                                         />
                                     </div>
                                     <Button
