@@ -129,7 +129,7 @@ export default function SubscriptionPage() {
             const data = await res.json();
 
             if (data.url) {
-                window.location.href = data.url; // Redirect to Stripe
+                window.location.href = data.url; // Redirect to Paystack
             } else if (data.success) {
                 setToast({ message: `Successfully subscribed to ${plan}!`, type: 'success' });
                 setCurrentPlan(plan);

@@ -1,99 +1,67 @@
 const express = require('express');
 const router = express.Router();
+const crypto = require('crypto');
 const paymentService = require('../services/paymentService');
-const prisma = require('../lib/prisma');
-const stripe = process.env.STRIPE_SECRET_KEY ? require('stripe')(process.env.STRIPE_SECRET_KEY) : null;
+const { authenticateToken } = require('../middleware/auth');
+const logger = require('../utils/logger');
+const AppError = require('../utils/AppError');
 
-const auth = require('../lib/authMiddleware');
-
-// Stripe Webhook (Must be before auth middleware)
+// Paystack Webhook
 router.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
-    const sig = req.headers['stripe-signature'];
+    const signature = req.headers['x-paystack-signature'];
+    const secret = process.env.PAYSTACK_SECRET_KEY;
 
-    // Safety check for missing secrets or stripe instance
-    if (!stripe || !process.env.STRIPE_WEBHOOK_SECRET) {
-        console.warn('Webhook received but Stripe not configured.');
-        return res.json({ received: true, mock: true });
+    if (!secret || !signature) {
+        return res.status(400).send('Webhook Error: Configuration missing');
+    }
+
+    const hash = crypto.createHmac('sha512', secret).update(req.body).digest('hex');
+
+    if (hash !== signature) {
+        logger.warn('Webhook Error: Invalid Signature');
+        return res.status(400).send('Invalid Signature');
     }
 
     let event;
-
     try {
-        event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+        event = JSON.parse(req.body.toString());
     } catch (err) {
-        console.error(`Webhook Signature Verification Failed: ${err.message}`);
         return res.status(400).send(`Webhook Error: ${err.message}`);
     }
 
     try {
-        await paymentService.handleWebhookEvent(event);
-        res.json({ received: true });
-    } catch (error) {
-        console.error('Webhook Handler Error:', error);
-        res.status(500).json({ error: 'Webhook processing failed' });
-    }
-});
-
-// Secure all other routes
-router.use(auth);
-
-// Create Subscription (Checkout Session)
-router.post('/subscribe', async (req, res) => {
-    try {
-        const { plan } = req.body;
-        const userId = req.user.userId;
-
-        const user = await prisma.user.findUnique({ where: { id: userId } });
-
-        if (!user) return res.status(404).json({ error: 'User not found' });
-
-        const result = await paymentService.createCheckoutSession(user, plan);
-
-        // If mock, save DB record immediately (DEV ONLY)
-        if (result.mock) {
-            // DOUBLE CHECK: Ensure we never process mock results in production if they somehow slip through
-            if (process.env.NODE_ENV === 'production') {
-                console.error('CRITICAL: Mock payment attempted in production!');
-                return res.status(403).json({ error: 'Mock payments disabled' });
-            }
-
-            await prisma.subscription.upsert({
-                where: { userId: userId },
-                update: {
-                    plan,
-                    status: 'Active',
-                    startDate: new Date(),
-                    endDate: new Date(new Date().setMonth(new Date().getMonth() + 1))
-                },
-                create: {
-                    userId: userId,
-                    plan,
-                    status: 'Active',
-                    startDate: new Date(),
-                    endDate: new Date(new Date().setMonth(new Date().getMonth() + 1))
-                }
-            });
+        if (event.event === 'charge.success') {
+            await paymentService.handleWebhookSuccess(event.data);
         }
-
-        res.json(result);
-    } catch (error) {
-        console.error('Error creating subscription:', error);
-        res.status(500).json({ error: 'Subscription failed' });
+        res.status(200).send({ received: true });
+    } catch (err) {
+        logger.error(`Webhook Processing Failed: ${err.message}`);
+        res.status(500).send(`Server Error: ${err.message}`);
     }
 });
 
-// Customer Portal
-router.post('/portal', async (req, res) => {
+// Create Checkout Session
+router.post('/create-session', authenticateToken, async (req, res, next) => {
     try {
-        const userId = req.user.userId;
-        const result = await paymentService.createPortalSession(userId);
-        res.json(result);
+        const { plan, cycle } = req.body;
+        if (!plan) throw new AppError('Plan is required', 400);
+
+        const { url, reference } = await paymentService.initiateTransaction(req.user.id, plan, cycle);
+
+        res.json({ url, reference });
     } catch (error) {
-        console.error('Error creating portal session:', error);
-        res.status(500).json({ error: 'Failed to create portal session' });
+        next(error);
     }
 });
 
-// Mock PayPal removed for production security
+// Portal
+router.post('/portal', authenticateToken, async (req, res, next) => {
+    try {
+        const { url } = await paymentService.createPortalSession(req.user.id);
+        res.json({ url });
+    } catch (error) {
+        next(error);
+    }
+});
 
 module.exports = router;

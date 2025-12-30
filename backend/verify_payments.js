@@ -1,6 +1,4 @@
 const axios = require('axios');
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
 
 async function login() {
     try {
@@ -9,66 +7,50 @@ async function login() {
             password: 'password123'
         });
         return { token: res.data.token, userId: res.data.user.id };
-    } catch (error) {
-        console.error('Login failed:', error.response?.data || error.message);
+    } catch (e) {
+        console.error('Login failed:', e.response?.data || e.message);
         process.exit(1);
     }
 }
 
-async function verify() {
-    console.log('--- Verifying Payment System (Mock Mode) ---');
-    const { token, userId } = await login();
-    const api = axios.create({
-        baseURL: 'http://localhost:3001/api',
-        headers: { Authorization: `Bearer ${token}` }
-    });
+async function verifyPayments() {
+    console.log('--- Verifying Payments (Paystack) ---');
 
+    console.log('1. Logging in...');
+    const { token } = await login();
+
+    // 2. Initiate Transaction
+    console.log('2. Initiating Checkout Session (Basic Plan)...');
     try {
-        // 1. Subscribe (Mock Checkout)
-        console.log('1. Testing Subscription Checkout...');
-        const subRes = await api.post('/payments/subscribe', {
-            userId,
-            plan: 'Advanced'
-        });
-        console.log('   ✅ Response:', subRes.data);
+        const res = await axios.post('http://localhost:3001/api/payments/create-session',
+            { plan: 'Basic', cycle: 'monthly' },
+            { headers: { Authorization: `Bearer ${token}` } }
+        );
 
-        // Verify DB update
-        const userSub = await prisma.subscription.findUnique({ where: { userId } });
-        if (userSub && userSub.plan === 'Advanced' && userSub.status === 'Active') {
-            console.log('   ✅ Database Record: Active / Advanced');
+        if (res.data.url && res.data.url.includes('paystack')) {
+            console.log('✅ Checkout URL generated:', res.data.url);
+            console.log('✅ Reference:', res.data.reference);
         } else {
-            console.error('   ❌ Database Record Mismatch:', userSub);
+            console.error('❌ Unexpected response:', res.data);
         }
-
-        // 2. Customer Portal
-        console.log('2. Testing Customer Portal...');
-        const portalRes = await api.post('/payments/portal', { userId });
-        console.log('   ✅ Portal URL:', portalRes.data.url);
-
-        // 3. Webhook Sim (Mock)
-        // Since we are likely in mock mode without keys, sending a random payload should result in "received: true, mock: true"
-        console.log('3. Testing Webhook Handler (Mock)...');
-        try {
-            const hookRes = await api.post('/payments/webhook', {
-                type: 'checkout.session.completed',
-                data: { object: { id: 'evt_test' } }
-            }, {
-                headers: { 'stripe-signature': 'test_sig' }
-            });
-            console.log('   ✅ Webhook Response:', hookRes.data);
-        } catch (e) {
-            if (e.response.status === 400) {
-                console.log('   ✅ Webhook correctly failed signature (if keys present) or handled mock.');
-            } else {
-                console.log('   ℹ️  Webhook Info:', e.response.data);
-            }
-        }
-
     } catch (e) {
-        console.error('❌ Verification Failed:', e.response?.data || e.message);
-    } finally {
-        await prisma.$disconnect();
+        if (e.response && e.response.status === 503) {
+            console.log('⚠️ Paystack not configured (Expected in some test envs). Skipping.');
+        } else {
+            console.error('❌ Failed to create session:', e.response?.data || e.message);
+        }
+    }
+
+    // 3. Test Portal Link (Management)
+    console.log('3. getting Portal/Management Link...');
+    try {
+        const res = await axios.post('http://localhost:3001/api/payments/portal', {}, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        console.log('✅ Portal Link:', res.data.url);
+    } catch (e) {
+        console.error('❌ Failed to get portal link:', e.response?.data || e.message);
     }
 }
 
-verify();
+verifyPayments();

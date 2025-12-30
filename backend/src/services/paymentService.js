@@ -1,130 +1,150 @@
+const axios = require('axios');
 const prisma = require('../lib/prisma');
-const stripe = process.env.STRIPE_SECRET_KEY ? require('stripe')(process.env.STRIPE_SECRET_KEY) : null;
+const logger = require('../utils/logger');
+const AppError = require('../utils/AppError');
+
+const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
+const PAYSTACK_BASE_URL = 'https://api.paystack.co';
+
+if (!PAYSTACK_SECRET_KEY) {
+    logger.warn('⚠️ PaymentService: PAYSTACK_SECRET_KEY missing. Payments unavailable.');
+}
+
+// Plan Configurations (Hardcoded for now, can be moved to DB/Env)
+const PLANS = {
+    'Basic': { amount: 2900, planCode: process.env.PAYSTACK_PLAN_BASIC }, // Amount in kobo/cents. 29.00
+    'Intermediate': { amount: 7900, planCode: process.env.PAYSTACK_PLAN_INTERMEDIATE },
+    'Advanced': { amount: 19900, planCode: process.env.PAYSTACK_PLAN_ADVANCED }
+};
 
 class PaymentService {
-    constructor() {
-        if (!stripe) {
-            if (process.env.NODE_ENV === 'production') {
-                throw new Error('🔴 CRITICAL: STRIPE_SECRET_KEY missing in Production. Payment processing disabled.');
+    /**
+     * Initiate a Paystack Transaction (Checkout)
+     */
+    async initiateTransaction(userId, planName, cycle = 'monthly') {
+        if (!PAYSTACK_SECRET_KEY) {
+            throw new AppError('Payment processing unavailable: Paystack configuration missing.', 503);
+        }
+
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            include: { tenant: true }
+        });
+
+        if (!user) throw new AppError('User not found', 404);
+
+        const planConfig = PLANS[planName];
+        if (!planConfig) throw new AppError('Invalid plan selected', 400);
+
+        // Metadata to track user and plan in webhook
+        const metadata = {
+            userId: user.id,
+            tenantId: user.tenantId,
+            planName: planName,
+            cycle: cycle
+        };
+
+        try {
+            const payload = {
+                email: user.email,
+                amount: planConfig.amount * 100, // Paystack expects lowest currency unit (kobo)
+                currency: 'USD', // Defaulting to USD as per SaaS likelyhood.
+                metadata: metadata,
+                callback_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard/settings/subscription?status=success`,
+                channels: ['card']
+            };
+
+            // If utilizing Paystack Plans (Subscriptions):
+            if (planConfig.planCode) {
+                payload.plan = planConfig.planCode;
             }
-            console.warn('⚠️ PaymentService: STRIPE_SECRET_KEY missing. Payments unavailable (Dev Mode).');
+
+            const response = await axios.post(`${PAYSTACK_BASE_URL}/transaction/initialize`, payload, {
+                headers: {
+                    Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (response.data.status) {
+                logger.info(`Paystack transaction initialized for user ${userId}`);
+                return {
+                    url: response.data.data.authorization_url,
+                    access_code: response.data.data.access_code,
+                    reference: response.data.data.reference
+                };
+            } else {
+                throw new Error(response.data.message || 'Paystack initialization failed');
+            }
+
+        } catch (error) {
+            logger.error('Paystack Init Error:', error.response?.data || error.message);
+            throw new AppError('Failed to initiate payment', 502);
         }
     }
 
-    async createCheckoutSession(user, plan) {
-        if (!stripe) {
-            throw new Error('Payment processing unavailable: Stripe configuration missing.');
+    /**
+     * Verify Transaction (can be called manually or via webhook)
+     */
+    async verifyTransaction(reference) {
+        if (!PAYSTACK_SECRET_KEY) throw new AppError('Paystack config missing', 503);
+
+        try {
+            const response = await axios.get(`${PAYSTACK_BASE_URL}/transaction/verify/${reference}`, {
+                headers: { Authorization: `Bearer ${PAYSTACK_SECRET_KEY}` }
+            });
+
+            if (response.data.status && response.data.data.status === 'success') {
+                return response.data.data;
+            }
+            return null;
+        } catch (error) {
+            logger.error('Paystack Verify Error:', error.message);
+            throw new AppError('Payment verification failed', 502);
+        }
+    }
+
+    /**
+     * Handle Webhook Success
+     */
+    async handleWebhookSuccess(data) {
+        const { metadata, reference, customer } = data;
+
+        if (!metadata || !metadata.userId) {
+            logger.warn(`Webhook: Missing metadata for reference ${reference}`);
+            return;
         }
 
-        // Map plan to Price ID (Use env vars in real app)
-        const prices = {
-            'Basic': process.env.STRIPE_PRICE_BASIC || 'price_basic_id',
-            'Intermediate': process.env.STRIPE_PRICE_INTERMEDIATE || 'price_intermediate_id',
-            'Advanced': process.env.STRIPE_PRICE_ADVANCED || 'price_advanced_id'
-        };
+        const { userId, planName } = metadata;
 
-        const session = await stripe.checkout.sessions.create({
-            payment_method_types: ['card'],
-            customer_email: user.email,
-            line_items: [{ price: prices[plan], quantity: 1 }],
-            mode: 'subscription',
-            success_url: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/dashboard/settings?session_id={CHECKOUT_SESSION_ID}`,
-            cancel_url: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/dashboard/settings`,
-            metadata: {
-                userId: user.id,
-                tenantId: user.tenantId,
-                plan: plan
-            }
+        logger.info(`Webhook: Processing success for user ${userId}, plan ${planName}`);
+
+        await prisma.$transaction(async (tx) => {
+            // Update Tenant Subscription
+            const user = await tx.user.findUnique({ where: { id: userId }, include: { tenant: true } });
+            if (!user) return;
+
+            // Calculate Next Billing Date
+            const nextBillingDate = new Date();
+            nextBillingDate.setMonth(nextBillingDate.getMonth() + 1);
+
+            await tx.tenant.update({
+                where: { id: user.tenantId },
+                data: {
+                    plan: planName,
+                    subscriptionStatus: 'active',
+                    stripeId: `${customer.customer_code}`, // Reusing column for Paystack Customer Code or Email
+                    nextBillingDate: nextBillingDate
+                }
+            });
+
+            logger.info(`Webhook: Updated tenant ${user.tenantId} to ${planName}`);
         });
-
-        return { url: session.url };
     }
 
     async createPortalSession(userId) {
-        const subscription = await prisma.subscription.findUnique({ where: { userId } });
-
-        if (!stripe || !subscription?.stripeId) {
-            throw new Error('Billing portal unavailable.');
-        }
-
-        const session = await stripe.billingPortal.sessions.create({
-            customer: subscription.stripeId, // stored customer ID
-            return_url: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/dashboard/settings`,
-        });
-
-        return { url: session.url };
-    }
-
-    async handleWebhookEvent(event) {
-        switch (event.type) {
-            case 'checkout.session.completed':
-                await this.handleCheckoutCompleted(event.data.object);
-                break;
-            case 'invoice.payment_succeeded':
-                await this.handleInvoicePaymentSucceeded(event.data.object);
-                break;
-            case 'customer.subscription.deleted':
-                await this.handleSubscriptionDeleted(event.data.object);
-                break;
-            default:
-                console.log(`Unhandled event type ${event.type}`);
-        }
-    }
-
-    async handleCheckoutCompleted(session) {
-        const { userId, plan } = session.metadata;
-
-        // RECEIPT VALIDATION: Ensure payment explicitly succeeded
-        if (session.payment_status !== 'paid') {
-            console.warn(`⚠️ Checkout completed but payment status is '${session.payment_status}'. Subscription NOT activated.`);
-            return;
-        }
-
-        // userId might be null if created outside app, handle safely if needed
-        if (!userId) return;
-
-        // IDEMPOTENCY CHECK: Avoid duplicate activation for same period
-        // Just checking userId isn't enough as they might resubscribe later
-        // But for "Completed" event, we check if we just did this.
-        const existingSub = await prisma.subscription.findUnique({ where: { userId } });
-
-        // If already active and start date is very recent (< 5 mins), ignore this webhook
-        if (existingSub && existingSub.status === 'Active' && (Date.now() - new Date(existingSub.updatedAt).getTime() < 5 * 60 * 1000)) {
-            console.log(`[Payment] Idempotency Cache Hit: Subscription for ${userId} already processed recently.`);
-            return;
-        }
-
-        await prisma.subscription.upsert({
-            where: { userId },
-            update: {
-                plan,
-                status: 'Active',
-                stripeId: session.customer, // Save Customer ID for Portal
-                startDate: new Date(),
-                // Simplification: In real app, fetch subscription to get period_end
-                endDate: new Date(new Date().setMonth(new Date().getMonth() + 1))
-            },
-            create: {
-                userId,
-                plan,
-                status: 'Active',
-                stripeId: session.customer,
-                startDate: new Date(),
-                endDate: new Date(new Date().setMonth(new Date().getMonth() + 1))
-            }
-        });
-        console.log(`✅ [Payment] STATE TRANSITION: Confirmed -> Settled (User: ${userId}, Plan: ${plan})`);
-    }
-
-    // Stub implementations for others
-    async handleInvoicePaymentSucceeded(invoice) {
-        // Extend subscription logic
-        console.log(`💰 Invoice paid: ${invoice.id}`);
-    }
-
-    async handleSubscriptionDeleted(subscription) {
-        // Find user by stripeId or email logic needed if metadata missing
-        console.log(`❌ Subscription canceled: ${subscription.id}`);
+        // For Paystack, return a link to manage subscriptions or a message
+        return { url: 'https://dashboard.paystack.com/#/subscriptions' };
     }
 }
 

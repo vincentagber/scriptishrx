@@ -20,12 +20,12 @@ app.use(helmet({
     contentSecurityPolicy: {
         directives: {
             defaultSrc: ["'self'"],
-            scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://js.stripe.com"],
+            scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://js.paystack.co"],
             styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
             fontSrc: ["'self'", "https://fonts.gstatic.com"],
-            imgSrc: ["'self'", "data:", "https://*.stripe.com"],
-            connectSrc: ["'self'", "https://api.stripe.com"],
-            frameSrc: ["'self'", "https://js.stripe.com", "https://hooks.stripe.com"],
+            imgSrc: ["'self'", "data:", "https://*.paystack.co", "https://*.paystack.com"],
+            connectSrc: ["'self'", "https://checkout.paystack.com", "https://api.paystack.co"],
+            frameSrc: ["'self'", "https://standard.paystack.co", "https://checkout.paystack.com"],
             objectSrc: ["'none'"],
             upgradeInsecureRequests: [],
         },

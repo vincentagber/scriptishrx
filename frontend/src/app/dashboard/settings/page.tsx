@@ -200,7 +200,7 @@ function SubscriptionSettings({ plan, showToast }: any) {
             });
             if (res.ok) {
                 const { url } = await res.json();
-                window.location.href = url; // Redirect to Stripe Portal
+                window.location.href = url; // Redirect to Paystack or Management Page
             } else {
                 showToast("Failed to initiate billing portal.", 'error');
             }
@@ -232,7 +232,7 @@ function SubscriptionSettings({ plan, showToast }: any) {
                     onClick={handleManageBilling}
                     className="flex items-center gap-2 px-6 py-3 bg-white border border-slate-300 shadow-sm text-slate-700 font-bold rounded-xl hover:bg-slate-50 hover:border-slate-400 transition-all"
                 >
-                    Manage Billing on Stripe <ExternalLink className="w-4 h-4" />
+                    Manage Subscription <ExternalLink className="w-4 h-4" />
                 </button>
             </div>
         </div>
@@ -1034,9 +1034,9 @@ export default function SettingsPage() {
                                     icon={Calendar}
                                 />
                                 <IntegrationItem
-                                    name="Stripe Payments"
-                                    description="Accept payments & send invoices."
-                                    connectedKey="stripe"
+                                    name="Paystack Payments"
+                                    description="Accept payments in NGN & USD."
+                                    connectedKey="paystack"
                                     integrations={integrations}
                                     onConnectClick={handleConnectClick}
                                     onDisconnectClick={handleDisconnect}
