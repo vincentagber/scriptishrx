@@ -105,7 +105,7 @@ export default function MinutesPage() {
         const token = localStorage.getItem('token');
         try {
             const res = await fetch(`/api/minutes/${editingMinute.id}`, {
-                method: 'PUT',
+                method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`

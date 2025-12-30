@@ -156,7 +156,7 @@ export default function ClientsPage() {
         try {
             const token = localStorage.getItem('token');
             const res = await fetch(`/api/clients/${editClient.id}`, {
-                method: 'PUT',
+                method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`

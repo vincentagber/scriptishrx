@@ -162,7 +162,7 @@ export default function BookingsPage() {
             const dateTime = new Date(`${editForm.date}T${editForm.time}`);
 
             const res = await fetch(`/api/bookings/${editBooking.id}`, {
-                method: 'PUT',
+                method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`

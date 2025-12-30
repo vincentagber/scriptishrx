@@ -35,7 +35,7 @@ export default function UpgradePage() {
     const fetchCurrentPlan = async () => {
         const token = localStorage.getItem('token');
         try {
-            const res = await fetch('http://localhost:5000/api/settings', {
+            const res = await fetch('/api/settings', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (res.ok) {
@@ -53,7 +53,7 @@ export default function UpgradePage() {
         setUpgrading(plan);
         const token = localStorage.getItem('token');
         try {
-            const res = await fetch('http://localhost:5000/api/settings/subscription', {
+            const res = await fetch('/api/settings/subscription', {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
