@@ -29,7 +29,7 @@ const defaultFaqs = [
   },
   {
     question: "Booking & Contact",
-    answer: "To book an appointment, you can email us at **info@scriptishrx.com** or call us at **+1 (872) 873-2880**. We'll be happy to assist you with scheduling!",
+    answer: "To book an appointment, you can email us at **info@scriptishrx.net** or call us at **+1 (872) 873-2880**. We'll be happy to assist you with scheduling!",
     keywords: ['book', 'appointment', 'contact', 'email', 'phone', 'schedule']
   },
   {
@@ -259,7 +259,7 @@ Your goal is to assist users with services, booking, location, directions, and g
     return searchResults[0].faq.answer + "\n\n*(Automated Reply)*";
   }
 
-  return `I'm sorry, I couldn't find a specific answer to that. Please contact us at info@scriptishrx.com or call +1 (872) 873-2880 for assistance.`;
+  return `I'm sorry, I couldn't find a specific answer to that. Please contact us at info@scriptishrx.net or call +1 (872) 873-2880 for assistance.`;
 }
 
 /**

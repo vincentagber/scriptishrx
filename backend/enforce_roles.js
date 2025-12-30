@@ -2,7 +2,7 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 async function main() {
-    const adminEmail = 'test@scriptishrx.com';
+    const adminEmail = 'test@scriptishrx.net';
 
     console.log(`--- Enforcing Roles ---`);
     console.log(`Target Admin: ${adminEmail}`);

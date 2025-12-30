@@ -31,7 +31,7 @@ async function main() {
     }
 
     // 3. Create Admin User
-    const email = 'admin@scriptishrx.com';
+    const email = 'admin@scriptishrx.net';
     const password = 'Password123!';
     const hashedPassword = await bcrypt.hash(password, 10);
 

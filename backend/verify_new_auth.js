@@ -19,7 +19,7 @@ async function main() {
         const resValid = await fetch('http://localhost:3001/api/auth/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: 'test@scriptishrx.com', password: 'password123' })
+            body: JSON.stringify({ email: 'test@scriptishrx.net', password: 'password123' })
         });
 
         if (resValid.status === 200) {

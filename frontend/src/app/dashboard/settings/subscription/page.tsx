@@ -40,13 +40,13 @@ function ContactSalesModal({ isOpen, onClose }: { isOpen: boolean, onClose: () =
                 </div>
 
                 <div className="space-y-4">
-                    <a href="mailto:sales@scriptishrx.com" className="flex items-center gap-4 p-4 rounded-xl border border-gray-100 hover:border-blue-200 hover:bg-blue-50 transition-all group">
+                    <a href="mailto:sales@scriptishrx.net" className="flex items-center gap-4 p-4 rounded-xl border border-gray-100 hover:border-blue-200 hover:bg-blue-50 transition-all group">
                         <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center group-hover:bg-blue-200 transition-colors">
                             <Mail className="w-5 h-5 text-blue-600" />
                         </div>
                         <div className="text-left">
                             <p className="text-sm font-bold text-gray-900">Email Us</p>
-                            <p className="text-sm text-blue-600 font-medium">sales@scriptishrx.com</p>
+                            <p className="text-sm text-blue-600 font-medium">info@scriptishrx.net</p>
                         </div>
                     </a>
 

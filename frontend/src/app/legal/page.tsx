@@ -70,8 +70,8 @@ export default function LegalPage() {
                                     <h4 className="font-bold text-blue-900">Questions or Concerns?</h4>
                                     <p className="text-blue-700 text-sm">Contact us regarding your personal data.</p>
                                 </div>
-                                <a href="mailto:info@scriptishrx.com" className="px-6 py-2 bg-white text-blue-600 font-semibold rounded-lg shadow-sm hover:shadow-md transition-all">
-                                    info@scriptishrx.com
+                                <a href="mailto:info@scriptishrx.net" className="px-6 py-2 bg-white text-blue-600 font-semibold rounded-lg shadow-sm hover:shadow-md transition-all">
+                                    info@scriptishrx.net
                                 </a>
                             </div>
                         </div>
@@ -150,7 +150,7 @@ export default function LegalPage() {
                             <div className="border-t border-slate-200 pt-8 mt-8">
                                 <h3 className="font-bold text-slate-900 text-lg mb-4">Copyright Infringement & Dispute Resolution</h3>
                                 <p className="mb-4">
-                                    ScriptishRx respects the intellectual property rights of others. If you believe that any material on our platform infringes upon your copyright, please contact us at <a href="mailto:info@scriptishrx.com" className="text-primary-start font-medium hover:underline">info@scriptishrx.com</a> with a detailed description of the alleged infringement, including evidence of ownership and relevant supporting materials.
+                                    ScriptishRx respects the intellectual property rights of others. If you believe that any material on our platform infringes upon your copyright, please contact us at <a href="mailto:info@scriptishrx.net" className="text-primary-start font-medium hover:underline">info@scriptishrx.net</a> with a detailed description of the alleged infringement, including evidence of ownership and relevant supporting materials.
                                 </p>
                                 <div className="bg-green-50 text-green-800 p-4 rounded-xl text-sm font-medium border border-green-100">
                                     Disclaimer: By subscribing to or using the ScriptishRx AI-powered platform, you agree to resolve any disputes related to its use in a fair and amicable manner before seeking any formal legal remedy.

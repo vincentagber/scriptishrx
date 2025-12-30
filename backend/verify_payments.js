@@ -5,7 +5,7 @@ const prisma = new PrismaClient();
 async function login() {
     try {
         const res = await axios.post('http://localhost:3001/api/auth/login', {
-            email: 'test@scriptishrx.com',
+            email: 'test@scriptishrx.net',
             password: 'password123'
         });
         return { token: res.data.token, userId: res.data.user.id };

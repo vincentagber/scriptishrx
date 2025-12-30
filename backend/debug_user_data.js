@@ -2,7 +2,7 @@
 const prisma = require('./lib/prisma');
 
 async function main() {
-    const email = 'test@scriptishrx.com';
+    const email = 'test@scriptishrx.net';
     console.log(`🔍 Checking data for ${email}...`);
 
     const user = await prisma.user.findUnique({

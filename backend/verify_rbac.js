@@ -14,8 +14,8 @@ async function verifyRBAC() {
     console.log('--- Verifying RBAC & Multi-User Support ---');
 
     // 1. Login as Admin/Owner
-    console.log('1. Logging in as Admin (test@scriptishrx.com)...');
-    const adminAuth = await login('test@scriptishrx.com', 'password123');
+    console.log('1. Logging in as Admin (test@scriptishrx.net)...');
+    const adminAuth = await login('test@scriptishrx.net', 'password123');
     if (!adminAuth) process.exit(1);
     console.log(`   ✅ Logged in as ${adminAuth.user.role}`);
 
@@ -23,7 +23,7 @@ async function verifyRBAC() {
 
     // 2. Add Subscriber
     console.log('2. Creating Subscriber User...');
-    const subEmail = `sub_${Date.now()}@scriptishrx.com`;
+    const subEmail = `sub_${Date.now()}@scriptishrx.net`;
     let subToken = null;
 
     try {

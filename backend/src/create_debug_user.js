@@ -7,7 +7,7 @@ dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 const prisma = new PrismaClient();
 
 async function main() {
-    const email = 'debug@scriptishrx.com';
+    const email = 'debug@scriptishrx.net';
     const password = 'Debug123!';
     const hashedPassword = await bcrypt.hash(password, 10);
 

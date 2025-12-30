@@ -6,8 +6,8 @@ const jwt = require('jsonwebtoken');
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key';
 
 async function main() {
-    // 1. Get a valid token for test@scriptishrx.com
-    const user = await prisma.user.findUnique({ where: { email: 'test@scriptishrx.com' } });
+    // 1. Get a valid token for test@scriptishrx.net
+    const user = await prisma.user.findUnique({ where: { email: 'test@scriptishrx.net' } });
     if (!user) {
         console.error("User not found via Prisma!");
         return;

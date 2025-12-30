@@ -1,7 +1,7 @@
 // Native fetch is available in Node 18+
 
 // Test User Credentials (from previous sessions)
-const email = 'test@scriptishrx.com';
+const email = 'test@scriptishrx.net';
 const password = 'password123';
 
 async function verifyMinutesCRUD() {
