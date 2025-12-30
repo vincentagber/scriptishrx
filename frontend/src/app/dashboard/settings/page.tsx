@@ -827,7 +827,7 @@ export default function SettingsPage() {
                                         className="relative w-32 h-32 rounded-full overflow-hidden border-4 border-white shadow-lg cursor-pointer group hover:border-blue-50 transition-all"
                                     >
                                         <img
-                                            src={profile.avatarUrl ? (profile.avatarUrl.startsWith('http') || profile.avatarUrl.startsWith('/') ? profile.avatarUrl : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}${profile.avatarUrl}`) : `https://ui-avatars.com/api/?name=${profile.name}&background=0D8ABC&color=fff`}
+                                            src={profile.avatarUrl ? (profile.avatarUrl.startsWith('data:') || profile.avatarUrl.startsWith('http') || profile.avatarUrl.startsWith('/') ? profile.avatarUrl : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}${profile.avatarUrl}`) : `https://ui-avatars.com/api/?name=${profile.name || 'User'}&background=0D8ABC&color=fff`}
                                             alt="Avatar"
                                             className="w-full h-full object-cover transition-transform group-hover:scale-110"
                                         />
@@ -854,6 +854,7 @@ export default function SettingsPage() {
                                                 className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all font-medium text-gray-900"
                                                 value={profile.name}
                                                 onChange={(e) => setProfile({ ...profile, name: e.target.value })}
+                                                placeholder="e.g. John Doe"
                                             />
                                         </div>
                                     </div>
@@ -866,6 +867,7 @@ export default function SettingsPage() {
                                                 className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all font-medium text-gray-900"
                                                 value={profile.email}
                                                 onChange={(e) => setProfile({ ...profile, email: e.target.value })}
+                                                placeholder="e.g. john@example.com"
                                             />
                                         </div>
                                     </div>

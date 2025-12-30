@@ -9,25 +9,12 @@ const auth = require('../lib/authMiddleware');
 const router = express.Router();
 
 // Configure storage
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        // Fix: Go up two levels from routes (routes -> src -> backend root)
-        const uploadDir = path.join(__dirname, '../../uploads');
-        if (!fs.existsSync(uploadDir)) {
-            fs.mkdirSync(uploadDir, { recursive: true });
-        }
-        cb(null, uploadDir);
-    },
-    filename: (req, file, cb) => {
-        // Create unique filename: user-id-timestamp.ext
-        const ext = path.extname(file.originalname);
-        cb(null, `user-${req.user.userId}-${Date.now()}${ext}`);
-    }
-});
+// Configure memory storage for Render compatibility (DB persistence)
+const storage = multer.memoryStorage();
 
 const upload = multer({
     storage,
-    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+    limits: { fileSize: 4 * 1024 * 1024 }, // 4MB limit (fits in TEXT column with overhead)
     fileFilter: (req, file, cb) => {
         const filetypes = /jpeg|jpg|png|gif|webp/;
         const mimetype = filetypes.test(file.mimetype);
@@ -46,9 +33,11 @@ router.post('/avatar', auth, upload.single('avatar'), async (req, res) => {
             return res.status(400).json({ error: 'No file uploaded' });
         }
 
-        const avatarUrl = `/uploads/${req.file.filename}`;
+        // Convert buffer to Base64 Data URI
+        const b64 = Buffer.from(req.file.buffer).toString('base64');
+        const avatarUrl = `data:${req.file.mimetype};base64,${b64}`;
 
-        // Update user profile
+        // Update user profile with persistent data
         await prisma.user.update({
             where: { id: req.user.userId },
             data: { avatarUrl }
