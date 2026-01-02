@@ -75,7 +75,21 @@ router.post('/',
     checkPermission('bookings', 'create'),
     async (req, res, next) => {
         try {
-            const tenantId = req.scopedTenantId;
+            const tenantId = req.scopedTenantId || req.body.tenantId || req.user?.tenantId;
+
+            if (!tenantId) {
+                console.error('[Bookings] Missing tenantId in request context', {
+                    userId: req.user?.id,
+                    scopedTenantId: req.scopedTenantId,
+                    userTenantId: req.user?.tenantId,
+                    bodyTenantId: req.body.tenantId
+                });
+                return res.status(400).json({
+                    success: false,
+                    error: 'Tenant context is missing. Please select an organization or log in again.'
+                });
+            }
+
             const validatedData = createBookingSchema.parse(req.body);
             const { clientId, date, purpose, status } = validatedData;
 

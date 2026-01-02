@@ -151,7 +151,21 @@ router.post('/',
     checkPermission('clients', 'create'),
     async (req, res) => {
         try {
-            const tenantId = req.scopedTenantId;
+            const tenantId = req.scopedTenantId || req.body.tenantId || req.user?.tenantId;
+
+            if (!tenantId) {
+                console.error('[Clients] Missing tenantId in request context', {
+                    userId: req.user?.id,
+                    scopedTenantId: req.scopedTenantId,
+                    userTenantId: req.user?.tenantId,
+                    bodyTenantId: req.body.tenantId
+                });
+                return res.status(400).json({
+                    success: false,
+                    error: 'Tenant context is missing. Please select an organization or log in again.'
+                });
+            }
+
             const validatedData = createClientSchema.parse(req.body);
             const { name, phone, email, notes, source } = validatedData;
 

@@ -194,6 +194,13 @@ async function verifyTenantAccess(req, res, next) {
         // Super admin can access any tenant
         if (req.user?.role === 'SUPER_ADMIN') {
             console.log('Super admin bypass');
+            if (requestedTenantId) {
+                req.scopedTenantId = requestedTenantId;
+                console.log('Super admin: using requestedTenantId', requestedTenantId);
+            } else if (userTenantId) {
+                req.scopedTenantId = userTenantId;
+                console.log('Super admin: using userTenantId', userTenantId);
+            }
             return next();
         }
 
