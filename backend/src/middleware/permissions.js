@@ -199,6 +199,20 @@ async function verifyTenantAccess(req, res, next) {
 
         // No tenant requested - use user's tenant
         if (!requestedTenantId) {
+            // FALLBACK: If token doesn't have tenantId (legacy token), fetch from DB
+            if (!userTenantId && userId) {
+                const user = await prisma.user.findUnique({
+                    where: { id: userId },
+                    select: { tenantId: true }
+                });
+                if (user) {
+                    req.user.tenantId = user.tenantId; // Update req.user for subsequent middleware
+                    req.scopedTenantId = user.tenantId;
+                    console.log('Fetched tenantId from DB (Legacy Token):', user.tenantId);
+                    return next();
+                }
+            }
+
             req.scopedTenantId = userTenantId; // Enforce tenant scoping
             console.log('No requested tenant, using userTenantId:', userTenantId);
             return next();

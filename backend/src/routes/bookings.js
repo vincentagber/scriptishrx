@@ -113,11 +113,11 @@ router.post('/',
                 // 3. Create Booking
                 return await tx.booking.create({
                     data: {
-                        clientId,
+                        client: { connect: { id: clientId } },
                         date: bookingDate,
                         purpose: purpose || '',
                         status: status || 'Scheduled',
-                        tenantId
+                        tenant: { connect: { id: tenantId } }
                     },
                     include: {
                         client: { select: { id: true, name: true, phone: true, email: true } }
