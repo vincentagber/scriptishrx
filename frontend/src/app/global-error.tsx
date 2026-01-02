@@ -1,9 +1,6 @@
 'use client'
 
-import { Inter } from 'next/font/google'
 import '@/app/globals.css'
-
-const inter = Inter({ subsets: ['latin'] })
 
 export default function GlobalError({
     error,
@@ -14,16 +11,44 @@ export default function GlobalError({
 }) {
     return (
         <html lang="en">
-            <body className={`${inter.className} min-h-screen bg-white flex flex-col items-center justify-center p-4`}>
-                <div className="max-w-md w-full text-center space-y-6">
-                    <div className="p-4 bg-red-50 text-red-600 rounded-2xl border border-red-100 font-mono text-sm break-all">
+            <body style={{
+                margin: 0,
+                padding: '1rem',
+                minHeight: '100vh',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontFamily: 'system-ui, -apple-system, sans-serif',
+                backgroundColor: 'white'
+            }}>
+                <div style={{ maxWidth: '28rem', width: '100%', textAlign: 'center' }}>
+                    <div style={{
+                        padding: '1rem',
+                        backgroundColor: '#fef2f2',
+                        color: '#dc2626',
+                        borderRadius: '1rem',
+                        border: '1px solid #fee2e2',
+                        fontFamily: 'monospace',
+                        fontSize: '0.875rem',
+                        wordBreak: 'break-all',
+                        marginBottom: '1.5rem'
+                    }}>
                         {error.message || 'An unexpected error occurred'}
                     </div>
-                    <h2 className="text-2xl font-bold text-slate-900">Something went wrong!</h2>
-                    <p className="text-slate-500">We encountered an error while rendering this page.</p>
+                    <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#0f172a', marginBottom: '0.5rem' }}>Something went wrong!</h2>
+                    <p style={{ color: '#64748b', marginBottom: '1.5rem' }}>We encountered an error while rendering this page.</p>
                     <button
                         onClick={() => reset()}
-                        className="px-6 py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-all"
+                        style={{
+                            padding: '0.75rem 1.5rem',
+                            backgroundColor: '#0f172a',
+                            color: 'white',
+                            borderRadius: '0.75rem',
+                            fontWeight: 'bold',
+                            border: 'none',
+                            cursor: 'pointer'
+                        }}
                     >
                         Try again
                     </button>
