@@ -58,7 +58,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 }
             } catch (err) {
                 console.error('User fetch failed:', err);
-                setUser(prev => prev || { name: 'Admin', email: 'admin@scriptishrx.net', avatarUrl: '' });
+                setUser(prev => prev || { name: 'Admin', email: 'admin@scriptishrx.com', avatarUrl: '' });
             }
         })();
     }, []);

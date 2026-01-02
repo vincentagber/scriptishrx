@@ -40,23 +40,13 @@ function ContactSalesModal({ isOpen, onClose }: { isOpen: boolean, onClose: () =
                 </div>
 
                 <div className="space-y-4">
-                    <a href="mailto:sales@scriptishrx.net" className="flex items-center gap-4 p-4 rounded-xl border border-gray-100 hover:border-blue-200 hover:bg-blue-50 transition-all group">
+                    <a href="mailto:info@scriptishrx.com" className="flex items-center gap-4 p-4 rounded-xl border border-gray-100 hover:border-blue-200 hover:bg-blue-50 transition-all group">
                         <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center group-hover:bg-blue-200 transition-colors">
                             <Mail className="w-5 h-5 text-blue-600" />
                         </div>
                         <div className="text-left">
                             <p className="text-sm font-bold text-gray-900">Email Us</p>
-                            <p className="text-sm text-blue-600 font-medium">info@scriptishrx.net</p>
-                        </div>
-                    </a>
-
-                    <a href="tel:+18881234567" className="flex items-center gap-4 p-4 rounded-xl border border-gray-100 hover:border-green-200 hover:bg-green-50 transition-all group">
-                        <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center group-hover:bg-green-200 transition-colors">
-                            <Phone className="w-5 h-5 text-green-600" />
-                        </div>
-                        <div className="text-left">
-                            <p className="text-sm font-bold text-gray-900">Call Us</p>
-                            <p className="text-sm text-green-700 font-medium">+1 (888) 123-4567</p>
+                            <p className="text-sm text-blue-600 font-medium">info@scriptishrx.com</p>
                         </div>
                     </a>
                 </div>
