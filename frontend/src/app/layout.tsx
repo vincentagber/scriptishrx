@@ -7,17 +7,8 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
 export const metadata: Metadata = {
     title: 'ScriptishRx | Modern Business CRM & Enterprise Management',
-    description: 'Transform your business operations with ScriptishRx. AI-powered client management, automated scheduling, and smart workflows.',
-    icons: {
-        icon: '/logo.jpg',
-        apple: '/logo.jpg',
-    },
-};
-
-export const viewport = {
-    width: 'device-width',
-    initialScale: 1,
-    maximumScale: 1,
+    description: 'Transform your business operations with ScriptishRx.',
+    icons: '/logo.jpg',
 };
 
 export default function RootLayout({

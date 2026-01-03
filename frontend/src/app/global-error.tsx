@@ -1,7 +1,5 @@
 'use client'
 
-import '@/app/globals.css'
-
 export default function GlobalError({
     error,
     reset,
@@ -34,7 +32,7 @@ export default function GlobalError({
                         wordBreak: 'break-all',
                         marginBottom: '1.5rem'
                     }}>
-                        {error.message || 'An unexpected error occurred'}
+                        {error?.message || 'An unexpected error occurred'}
                     </div>
                     <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#0f172a', marginBottom: '0.5rem' }}>Something went wrong!</h2>
                     <p style={{ color: '#64748b', marginBottom: '1.5rem' }}>We encountered an error while rendering this page.</p>
