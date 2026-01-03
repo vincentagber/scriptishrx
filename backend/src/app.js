@@ -56,7 +56,7 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.urlencoded({ extended: false, limit: '10mb' }));
-app.use(express.urlencoded({ extended: false, limit: '10mb' }));
+
 app.use(express.json({
     limit: '10mb',
     verify: (req, res, buf) => {
@@ -139,6 +139,7 @@ if (legacyChatRouter) {
 
 
 // Other routes
+app.use('/api/calendar', require('./routes/calendar'));
 app.use('/api/clients', clientsRouter);
 app.use('/api/bookings', bookingsRouter);
 app.use('/api/minutes', minutesRouter);

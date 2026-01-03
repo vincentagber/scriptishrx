@@ -238,8 +238,15 @@ router.put('/tenant',
                 // FIXED: Allow Trial plan (implied full access) to also set custom prompts
                 if (currentTenant.plan === 'Advanced' || currentTenant.plan === 'Trial') {
                     // SECURITY: Validate and sanitize prompt
-                    const sanitizedPrompt = validateSystemPrompt(customSystemPrompt);
-                    updateData.customSystemPrompt = sanitizedPrompt;
+                    try {
+                        const sanitizedPrompt = validateSystemPrompt(customSystemPrompt);
+                        updateData.customSystemPrompt = sanitizedPrompt;
+                    } catch (validationError) {
+                        return res.status(400).json({
+                            success: false,
+                            error: validationError.message
+                        });
+                    }
                 } else {
                     console.warn(`Tenant ${tenantId} attempted to set custom prompt without Advanced plan`);
                     return res.status(403).json({

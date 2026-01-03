@@ -13,7 +13,8 @@ import { useDashboardStats, useVoiceStats } from '@/hooks/useDashboardData';
 import { RecentBookings } from '@/components/dashboard/RecentBookings';
 import { RevenueChart } from '@/components/dashboard/RevenueChart';
 import { ServiceList } from '@/components/dashboard/ServiceList';
-import { GettingStarted } from '@/components/dashboard/GettingStarted';
+
+import { GoogleCalendarWidget } from '@/components/dashboard/GoogleCalendarWidget';
 import Link from 'next/link';
 
 // --- Variants for Animations ---
@@ -188,10 +189,7 @@ export default function DashboardPage() {
                 </div>
             </motion.div>
 
-            {/* Onboarding Guide */}
-            <motion.div variants={itemVariants}>
-                <GettingStarted />
-            </motion.div>
+
 
             {/* --- HERO STATS GRID --- */}
             <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -324,6 +322,8 @@ export default function DashboardPage() {
                         <RecentBookings />
                     </div>
 
+                    {/* Google Calendar Widget */}
+                    <GoogleCalendarWidget />
                 </motion.div>
             </div>
         </motion.div>

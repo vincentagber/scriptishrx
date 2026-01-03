@@ -7,6 +7,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { registerSchema, loginSchema } = require('../schemas/validation');
 const { authLimiter, registerLimiter } = require('../middleware/rateLimiting');
+const { authenticateToken } = require('../middleware/auth');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const REFRESH_SECRET = process.env.REFRESH_SECRET || process.env.JWT_SECRET;
@@ -138,7 +139,8 @@ router.post('/register', registerLimiter, async (req, res) => {
                 data: {
                     name: tenantName,
                     location,
-                    timezone
+                    timezone,
+                    plan: 'Trial' // Start on Trial plan for full access
                 },
             });
             const user = await prisma.user.create({
@@ -261,6 +263,77 @@ router.post('/refresh', async (req, res) => {
 router.post('/logout', (req, res) => {
     res.clearCookie('refresh_token');
     res.json({ success: true, message: 'Logged out' });
+});
+
+const { google } = require('googleapis');
+
+// GOOGLE CALENDAR OAUTH
+const oauth2Client = new google.auth.OAuth2(
+    process.env.GOOGLE_CLIENT_ID,
+    process.env.GOOGLE_CLIENT_SECRET,
+    process.env.GOOGLE_REDIRECT_URI // Must match exactly what is registered in Console
+);
+
+// Initiate Google Auth
+router.get('/google', authenticateToken, (req, res) => {
+    const scopes = ['https://www.googleapis.com/auth/calendar.readonly'];
+
+    // Generate state with userId
+    const state = JSON.stringify({ userId: req.user.userId || req.user.id });
+
+    const url = oauth2Client.generateAuthUrl({
+        access_type: 'offline',
+        scope: scopes,
+        prompt: 'consent',
+        state: state
+    });
+    res.json({ url });
+});
+
+// Callback - Now expects Frontend to pass the code
+router.post('/google/callback', authenticateToken, async (req, res) => {
+    const { code } = req.body;
+    if (!code) return res.status(400).json({ error: 'No code provided' });
+
+    try {
+        // Exchange code for tokens
+        // IMPORTANT: The client must be configured with the SAME redirect_uri that was used to get the code
+        const { tokens } = await oauth2Client.getToken(code);
+
+        const userId = req.user.userId || req.user.id; // User is authenticated by token now
+
+        await prisma.user.update({
+            where: { id: userId },
+            data: {
+                googleAccessToken: tokens.access_token,
+                googleRefreshToken: tokens.refresh_token,
+                googleTokenExpiry: tokens.expiry_date
+            }
+        });
+
+        res.json({ success: true, message: 'Google Calendar connected successfully' });
+    } catch (error) {
+        console.error('Google Auth Callback Error:', error);
+        res.status(500).json({ error: 'Authentication failed', details: error.message });
+    }
+});
+
+// Disconnect
+router.post('/google/disconnect', authenticateToken, async (req, res) => {
+    try {
+        const userId = req.user.userId || req.user.id;
+        await prisma.user.update({
+            where: { id: userId },
+            data: {
+                googleAccessToken: null,
+                googleRefreshToken: null,
+                googleTokenExpiry: null
+            }
+        });
+        res.json({ success: true, message: 'Disconnected Google Calendar' });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to disconnect' });
+    }
 });
 
 module.exports = router;
