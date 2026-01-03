@@ -1,26 +1,18 @@
-const axios = require('axios');
 const prisma = require('../lib/prisma');
 const notificationService = require('./notificationService');
 const AppError = require('../utils/AppError');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 class PaymentService {
     constructor() {
-        if (process.env.PAYSTACK_SECRET_KEY) {
-            this.paystack = axios.create({
-                baseURL: 'https://api.paystack.co',
-                headers: {
-                    Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
-                    'Content-Type': 'application/json'
-                }
-            });
-        } else {
-            console.warn('⚠️ Paystack Secret Key Missing. Payment features will be disabled.');
+        if (!process.env.STRIPE_SECRET_KEY) {
+            console.warn('⚠️ Stripe Secret Key Missing. Payment features will be disabled.');
         }
     }
 
-    // Initialize Transaction
+    // Initialize Stripe Checkout Session
     async initiateTransaction(userId, plan, cycle = 'monthly') {
-        if (!this.paystack) throw new AppError('Payment processing unavailable.', 503);
+        if (!process.env.STRIPE_SECRET_KEY) throw new AppError('Payment processing unavailable.', 503);
 
         const user = await prisma.user.findUnique({
             where: { id: userId },
@@ -29,153 +21,132 @@ class PaymentService {
 
         if (!user) throw new AppError('User not found', 404);
 
-        // Plan Logic
+        // Map Plans to Stripe Price IDs (You should set these in .env or a config)
         const priceMap = {
-            'Basic': { amount: 2900, planCode: process.env.PAYSTACK_PLAN_BASIC },
-            'Intermediate': { amount: 7900, planCode: process.env.PAYSTACK_PLAN_INTERMEDIATE },
-            'Advanced': { amount: 19900, planCode: process.env.PAYSTACK_PLAN_ADVANCED }
+            'Basic': process.env.STRIPE_PRICE_BASIC || 'price_basic_placeholder',
+            'Intermediate': process.env.STRIPE_PRICE_INTERMEDIATE || 'price_intermediate_placeholder',
+            'Advanced': process.env.STRIPE_PRICE_ADVANCED || 'price_advanced_placeholder'
         };
 
-        const planConfig = priceMap[plan];
-        if (!planConfig) throw new AppError('Invalid plan selected', 400);
+        const priceId = priceMap[plan];
+        // Fallback for demo/test if no price ID: use ad-hoc line item
+        const fallbackAmount = plan === 'Basic' ? 2900 : plan === 'Intermediate' ? 7900 : 19900; // Cents
 
         try {
-            // Call Paystack API
-            const payload = {
-                email: user.email,
-                amount: planConfig.amount * 100, // kobo
-                currency: 'NGN',
+            const sessionConfig = {
+                payment_method_types: ['card'],
+                mode: 'subscription',
+                customer_email: user.email,
+                client_reference_id: user.id,
                 metadata: {
                     userId: user.id,
                     tenantId: user.tenantId,
                     plan,
                     cycle
                 },
-                callback_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard/settings/subscription?status=success`,
-                channels: ['card', 'bank', 'ussd', 'qr', 'mobile_money', 'bank_transfer']
+                line_items: priceId && !priceId.includes('placeholder') ? [
+                    { price: priceId, quantity: 1 }
+                ] : [
+                    {
+                        price_data: {
+                            currency: 'usd',
+                            product_data: {
+                                name: `${plan} Plan Subscription`,
+                            },
+                            unit_amount: fallbackAmount, // amount in cents
+                            recurring: {
+                                interval: cycle === 'yearly' ? 'year' : 'month',
+                            },
+                        },
+                        quantity: 1,
+                    },
+                ],
+                success_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard/settings/subscription?session_id={CHECKOUT_SESSION_ID}`,
+                cancel_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard/settings/subscription?status=cancelled`,
             };
 
-            const response = await this.paystack.post('/transaction/initialize', payload);
-            const { authorization_url, access_code, reference } = response.data.data;
+            const session = await stripe.checkout.sessions.create(sessionConfig);
 
-            // PERSIST TRANSACTION TO DB
+            // PERSIST TRANSACTION TO DB (Pending)
             await prisma.transaction.create({
                 data: {
                     userId: user.id,
-                    reference: reference,
-                    amount: planConfig.amount * 100,
-                    currency: 'NGN',
+                    reference: session.id, // Use Session ID as reference
+                    amount: session.amount_total || fallbackAmount,
+                    currency: session.currency || 'usd',
                     status: 'INITIATED',
                     plan: plan,
-                    metadata: payload
+                    metadata: { ...sessionConfig.metadata, checkoutUrl: session.url }
                 }
             });
 
-            console.log(`✅ Transaction Initiated: ${reference}`);
-            return { url: authorization_url, reference };
+            console.log(`✅ Stripe Session Initiated: ${session.id}`);
+            return { url: session.url, reference: session.id };
         } catch (error) {
-            console.error('Paystack Init Error:', error.response?.data || error.message);
+            console.error('Stripe Init Error:', error.message);
             throw new AppError('Failed to initiate payment', 502);
         }
     }
 
-    // Verify Transaction via Webhook or Manual
-    async verifyTransaction(reference) {
-        if (!this.paystack) return false;
+    // Handle Completed Checkout via Webhook
+    async handleCheckoutSuccess(session) {
+        const reference = session.id;
+        const metadata = session.metadata || {};
+        const amount = session.amount_total || session.amount_subtotal;
 
-        // SIMULATION MODE (Dev/Audit only)
-        if (reference.startsWith('sim_') && process.env.NODE_ENV !== 'production') {
-            console.log(`⚠️ Simulation Verify: ${reference}`);
-            const existingTx = await prisma.transaction.findUnique({
-                where: { reference },
-                include: { user: true }
-            });
+        // Find existing transaction or create (if webhook comes first)
+        const existingTx = await prisma.transaction.findFirst({
+            where: { reference }
+        });
 
-            if (existingTx) {
-                await this._handleSuccessResponse(existingTx, reference, {
-                    userId: existingTx.userId,
-                    tenantId: existingTx.metadata?.tenantId,
-                    plan: existingTx.plan
-                }, existingTx.amount);
-                return true;
-            }
-            return false;
-        }
-
-        try {
-            // 1. Check DB first to avoid duplicate work if already successful
-            const existingTx = await prisma.transaction.findUnique({
-                where: { reference },
-                include: { user: true }
-            });
-
-            if (existingTx && existingTx.status === 'SUCCESS') {
-                return true;
-            }
-
-            // 2. Verify with Paystack
-            const response = await this.paystack.get(`/transaction/verify/${reference}`);
-            const { status, amount, metadata } = response.data.data;
-
-            if (status === 'success') {
-                await this._handleSuccessResponse(existingTx, reference, metadata, amount);
-                return true;
-            } else {
-                await prisma.transaction.update({
-                    where: { reference },
-                    data: {
-                        status: 'FAILED',
-                        errorMessage: response.data.data.gateway_response || 'Payment Failed'
-                    }
-                });
-                if (existingTx && existingTx.user) {
-                    this.sendFailureEmail(existingTx.user, metadata?.plan, 'Payment Declined');
-                }
-                return false;
-            }
-
-        } catch (error) {
-            console.error('Verification Error:', error.message);
-            return false;
-        }
-    }
-
-    async _handleSuccessResponse(existingTx, reference, metadata, amount) {
+        // 1. Update/Create Transaction
         await prisma.$transaction(async (tx) => {
-            // Update Transaction
-            // We use upsert on Transaction just in case it didn't exist (webhook came before local db create finished? unlikely but safe)
-            // Actually assuming it exists or we update it.
             if (existingTx) {
                 await tx.transaction.update({
-                    where: { reference },
+                    where: { id: existingTx.id },
                     data: {
                         status: 'SUCCESS',
                         paidAt: new Date(),
-                        metadata: metadata
+                        metadata: { ...existingTx.metadata, stripePaymentIntent: session.payment_intent }
+                    }
+                });
+            } else {
+                await tx.transaction.create({
+                    data: {
+                        userId: metadata.userId, // Might be null if direct Stripe link used, handle with care
+                        reference: reference,
+                        amount: amount || 0,
+                        currency: session.currency || 'usd',
+                        status: 'SUCCESS',
+                        plan: metadata.plan || 'Unknown',
+                        paidAt: new Date(),
+                        metadata: session
                     }
                 });
             }
 
-            // Update Subscription
-            const plan = metadata?.plan || 'Basic';
-            if (metadata && metadata.userId) {
+            // 2. Update Subscription
+            if (metadata.userId) {
+                const plan = metadata.plan || 'Basic';
                 await tx.subscription.upsert({
                     where: { userId: metadata.userId },
                     create: {
                         userId: metadata.userId,
                         plan: plan,
                         status: 'active',
-                        stripeId: `paystack_${reference}`,
-                        startDate: new Date()
+                        stripeId: session.subscription || session.payment_intent, // Sub ID for recurring
+                        startDate: new Date(),
+                        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // Rough default
                     },
                     update: {
                         plan: plan,
                         status: 'active',
+                        stripeId: session.subscription || session.payment_intent,
                         updatedAt: new Date()
                     }
                 });
 
-                // Update Tenant (Access Control)
+                // Update Tenant
                 if (metadata.tenantId) {
                     await tx.tenant.update({
                         where: { id: metadata.tenantId },
@@ -185,42 +156,37 @@ class PaymentService {
             }
         });
 
-        console.log(`✅ Payment Verified: ${reference}`);
+        console.log(`✅ Stripe Payment Verified: ${reference}`);
 
-        // 1. Notify the Subscriber (Success)
-        if (existingTx && existingTx.user) {
-            await this.sendSuccessEmail(existingTx.user, amount / 100, reference, metadata?.plan);
-        }
-
-        // 2. Notify SUPER_ADMINs (New Subscription Event)
+        // 3. Notify
         try {
-            const superAdmins = await prisma.user.findMany({
-                where: { role: 'SUPER_ADMIN' },
-                select: { email: true }
-            });
-
-            const subscriptionType = metadata?.type || 'INDIVIDUAL';
-            const subscriberName = existingTx?.user?.name || existingTx?.user?.email || 'Unknown User';
-
-            for (const admin of superAdmins) {
-                await notificationService.sendEmail(
-                    admin.email,
-                    `🔔 New Subscription Alert: ${subscriberName}`,
-                    `<div style="font-family: sans-serif; padding: 20px; border: 1px solid #ddd;">
-                        <h2>New Subscriber Joined</h2>
-                        <p><strong>Type:</strong> ${subscriptionType}</p>
-                        <p><strong>Subscriber:</strong> ${subscriberName} (${existingTx?.user?.email})</p>
-                        <p><strong>Plan:</strong> ${metadata?.plan}</p>
-                        <p><strong>Amount:</strong> NGN ${amount / 100}</p>
-                        <p><strong>Reference:</strong> ${reference}</p>
-                        <p><strong>Date:</strong> ${new Date().toLocaleString()}</p>
-                        <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard/admin">View in Dashboard</a>
-                     </div>`
-                );
+            const user = await prisma.user.findUnique({ where: { id: metadata.userId } });
+            if (user) {
+                await this.sendSuccessEmail(user, (amount / 100).toFixed(2), reference, metadata.plan);
             }
-            console.log(`📧 Superadmin Alerts Sent: ${superAdmins.length}`);
-        } catch (emailErr) {
-            console.error('Failed to alert superadmins:', emailErr);
+        } catch (e) {
+            console.error('Notification error:', e.message);
+        }
+    }
+
+    // Handle Invoice Paid (Recurring renewal)
+    async handleInvoicePaid(invoice) {
+        // Logic to extend subscription expiry based on invoice period
+        const subscriptionId = invoice.subscription;
+        if (!subscriptionId) return;
+
+        console.log(`💰 Invoice Paid for Sub: ${subscriptionId}`);
+        // Find subscription by stripeId
+        const sub = await prisma.subscription.findFirst({ where: { stripeId: subscriptionId } });
+        if (sub) {
+            await prisma.subscription.update({
+                where: { id: sub.id },
+                data: {
+                    status: 'active',
+                    // Extend date based on invoice period_end
+                    endDate: new Date(invoice.lines.data[0].period.end * 1000)
+                }
+            });
         }
     }
 
@@ -230,7 +196,7 @@ class PaymentService {
             <div style="font-family: sans-serif; padding: 20px;">
                 <h2>Payment Confirmed!</h2>
                 <p>Hi ${user.name || 'there'},</p>
-                <p>We successfully received your payment of <strong>NGN ${amount}</strong> for the <strong>${plan}</strong> plan.</p>
+                <p>We successfully received your payment of <strong>$${amount}</strong> for the <strong>${plan}</strong> plan.</p>
                 <p><strong>Reference:</strong> ${reference}</p>
                 <p>Your subscription is now active.</p>
             </div>
@@ -238,13 +204,24 @@ class PaymentService {
         await notificationService.sendEmail(user.email, subject, body);
     }
 
-    async sendFailureEmail(user, plan, reason) {
-        const subject = `Payment Failed for ${plan}`;
-        await notificationService.sendEmail(user.email, subject, `Payment failed. Reason: ${reason}`);
-    }
-
     async createPortalSession(userId) {
-        return { url: 'https://dashboard.paystack.com/#/subscriptions' };
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            include: { subscription: true }
+        });
+
+        if (!user || !user.subscription || !user.subscription.stripeId) {
+            throw new AppError('No active stripe subscription found', 400);
+        }
+
+        // Quick fix: Retrieve sub from Stripe to get customer ID
+        const sub = await stripe.subscriptions.retrieve(user.subscription.stripeId);
+        const session = await stripe.billingPortal.sessions.create({
+            customer: sub.customer,
+            return_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard/settings`,
+        });
+
+        return { url: session.url };
     }
 }
 

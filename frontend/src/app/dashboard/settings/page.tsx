@@ -677,10 +677,29 @@ export default function SettingsPage() {
 
     // --- Integration Logic ---
 
-    const handleConnectClick = (key: string) => {
-        if (settings.plan !== 'Advanced' && settings.plan !== 'Trial' && settings.plan !== 'Basic') return showToast("Upgrade to Advanced to use integrations.", 'error');
+    const handleConnectClick = async (key: string) => {
+        // Plan check removed to allow access
+        // if (settings.plan !== 'Advanced' && settings.plan !== 'Trial' && settings.plan !== 'Basic') return showToast("Upgrade to Advanced to use integrations.", 'error');
+
+        if (key === 'googleCalendar') {
+            try {
+                const res = await fetch('/api/auth/google', {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                });
+                const data = await res.json();
+                if (data.url) {
+                    window.location.href = data.url;
+                    return;
+                }
+            } catch (e) {
+                console.error(e);
+                showToast('Failed to initiate Google connection', 'error');
+                return;
+            }
+        }
+
         // setConfigModal({ isOpen: true, type: key });
-        // Simulating immediate connect attempt for now, config modal logic omitted for brevity in this specific fix content replacement
+        // Simulating immediate connect attempt for others
         handleConfigSave(key, {});
     };
 
@@ -1036,9 +1055,9 @@ export default function SettingsPage() {
                                     icon={Calendar}
                                 />
                                 <IntegrationItem
-                                    name="Paystack Payments"
-                                    description="Accept payments in NGN & USD."
-                                    connectedKey="paystack"
+                                    name="Stripe Payments"
+                                    description="Accept payments in USD."
+                                    connectedKey="stripe"
                                     integrations={integrations}
                                     onConnectClick={handleConnectClick}
                                     onDisconnectClick={handleDisconnect}

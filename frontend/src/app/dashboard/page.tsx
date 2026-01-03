@@ -14,7 +14,7 @@ import { RecentBookings } from '@/components/dashboard/RecentBookings';
 import { RevenueChart } from '@/components/dashboard/RevenueChart';
 import { ServiceList } from '@/components/dashboard/ServiceList';
 
-import { GoogleCalendarWidget } from '@/components/dashboard/GoogleCalendarWidget';
+import { CalendarWidget } from '@/components/dashboard/CalendarWidget';
 import Link from 'next/link';
 
 // --- Variants for Animations ---
@@ -111,7 +111,7 @@ export default function DashboardPage() {
 
     return (
         <motion.div
-            className="min-h-screen text-slate-800 p-4 md:p-8 space-y-8 relative overflow-hidden"
+            className="min-h-screen text-slate-800 p-4 md:p-8 space-y-8 relative overflow-x-hidden"
             variants={containerVariants}
             initial="hidden"
             animate="visible"
@@ -317,13 +317,13 @@ export default function DashboardPage() {
                         </div>
                     </div>
 
-                    {/* Recent Bookings Feed */}
-                    <div className="bg-white/70 backdrop-blur-xl rounded-3xl p-1 border border-white/50 shadow-sm h-full">
+                    {/* Recent Bookings Feed - REMOVED h-full to prevent layout issues */}
+                    <div className="bg-white/70 backdrop-blur-xl rounded-3xl p-1 border border-white/50 shadow-sm">
                         <RecentBookings />
                     </div>
 
-                    {/* Google Calendar Widget */}
-                    <GoogleCalendarWidget />
+                    {/* Professional Calendar Widget */}
+                    <CalendarWidget />
                 </motion.div>
             </div>
         </motion.div>

@@ -1,37 +1,42 @@
 const express = require('express');
 const router = express.Router();
-const crypto = require('crypto');
 const paymentService = require('../services/paymentService');
 const { authenticateToken } = require('../middleware/auth');
 const logger = require('../utils/logger');
 const AppError = require('../utils/AppError');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
-// Paystack Webhook
-router.post('/webhook', async (req, res) => {
-    const signature = req.headers['x-paystack-signature'];
-    const secret = process.env.PAYSTACK_SECRET_KEY;
+// Stripe Webhook
+router.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+    const sig = req.headers['stripe-signature'];
+    const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
-    if (!secret || !signature) {
-        return res.status(400).send('Webhook Error: Configuration missing');
-    }
-
-    // Verify Signature using rawBody captured in app.js
-    const hash = crypto.createHmac('sha512', secret)
-        .update(req.rawBody || JSON.stringify(req.body)) // Fallback if rawBody missing (dev/test)
-        .digest('hex');
-
-    if (hash !== signature) {
-        logger.warn('Webhook Error: Invalid Signature');
-        return res.status(400).send('Invalid Signature');
-    }
-
-    const event = req.body; // Already parsed by global middleware
+    let event;
 
     try {
-        if (event.event === 'charge.success') {
-            await paymentService.verifyTransaction(event.data.reference);
+        // req.rawBody must be available. 
+        // Note: In app.js, ensure rawBody is captured or use express.raw() here if not processed yet.
+        // But app.js likely applies bodyParser globally. 
+        // The safest way with global JSON parser is to verify signature using the raw buffer captured.
+        // Assuming app.js captures `req.rawBody` as seen in previous view_file of app.js.
+        event = stripe.webhooks.constructEvent(req.rawBody || req.body, sig, endpointSecret);
+    } catch (err) {
+        logger.error(`Webhook Signature Error: ${err.message}`);
+        return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+
+    try {
+        switch (event.type) {
+            case 'checkout.session.completed':
+                await paymentService.handleCheckoutSuccess(event.data.object);
+                break;
+            case 'invoice.payment_succeeded':
+                await paymentService.handleInvoicePaid(event.data.object);
+                break;
+            default:
+            // console.log(`Unhandled event type ${event.type}`);
         }
-        res.status(200).send({ received: true });
+        res.json({ received: true });
     } catch (err) {
         logger.error(`Webhook Processing Failed: ${err.message}`);
         res.status(500).send(`Server Error: ${err.message}`);
