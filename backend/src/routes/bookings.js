@@ -11,6 +11,8 @@ const { createBookingSchema, updateBookingSchema } = require('../schemas/validat
 const idempotency = require('../middleware/idempotency');
 const { checkFeature } = require('../config/features');
 const AppError = require('../utils/AppError');
+const notificationService = require('../services/notificationService');
+const { google } = require('googleapis');
 
 // GLOBAL: Check feature enabled
 router.use(checkFeature('BOOKINGS'));
@@ -91,7 +93,7 @@ router.post('/',
             }
 
             const validatedData = createBookingSchema.parse(req.body);
-            const { clientId, date, purpose, status } = validatedData;
+            const { clientId, date, purpose, status, meetingLink: manualMeetingLink } = validatedData;
 
             const bookingDate = new Date(date);
             const endTime = new Date(bookingDate.getTime() + 60 * 60 * 1000);
@@ -124,13 +126,14 @@ router.post('/',
                     throw new AppError('Slot is already booked', 409, 'BOOKING_CONFLICT');
                 }
 
-                // 3. Create Booking
+                // 3. Create Booking (meetingLink may be generated below)
                 return await tx.booking.create({
                     data: {
                         client: { connect: { id: clientId } },
                         date: bookingDate,
                         purpose: purpose || '',
                         status: status || 'Scheduled',
+                        meetingLink: manualMeetingLink || null,
                         tenant: { connect: { id: tenantId } }
                     },
                     include: {
@@ -139,9 +142,101 @@ router.post('/',
                 });
             });
 
+            // --- POST-CREATION: Google Meet & Email ---
+            let meetingLink = booking.meetingLink;
+
+            // 4. Attempt Google Meet Generation (if user is connected)
+            if (!meetingLink) {
+                try {
+                    const user = await prisma.user.findUnique({ where: { id: req.user.userId } });
+
+                    if (user?.googleAccessToken && user?.googleRefreshToken) {
+                        const oauth2Client = new google.auth.OAuth2(
+                            process.env.GOOGLE_CLIENT_ID,
+                            process.env.GOOGLE_CLIENT_SECRET,
+                            process.env.GOOGLE_REDIRECT_URI
+                        );
+
+                        oauth2Client.setCredentials({
+                            access_token: user.googleAccessToken,
+                            refresh_token: user.googleRefreshToken
+                        });
+
+                        const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+
+                        const event = {
+                            summary: `Booking: ${booking.client?.name || 'Client'}`,
+                            description: purpose || 'Scheduled via ScriptishRx',
+                            start: { dateTime: bookingDate.toISOString(), timeZone: 'UTC' },
+                            end: { dateTime: endTime.toISOString(), timeZone: 'UTC' },
+                            conferenceData: {
+                                createRequest: {
+                                    requestId: booking.id,
+                                    conferenceSolutionKey: { type: 'hangoutsMeet' }
+                                }
+                            }
+                        };
+
+                        const createdEvent = await calendar.events.insert({
+                            calendarId: 'primary',
+                            resource: event,
+                            conferenceDataVersion: 1
+                        });
+
+                        meetingLink = createdEvent.data.hangoutLink;
+
+                        // Update booking with the meeting link
+                        if (meetingLink) {
+                            await prisma.booking.update({
+                                where: { id: booking.id },
+                                data: { meetingLink }
+                            });
+                        }
+
+                        console.log(`✅ Google Meet created: ${meetingLink}`);
+                    }
+                } catch (gcalError) {
+                    console.error('Failed to create Google Meet link:', gcalError.message);
+                    // Non-fatal: continue without Meet link
+                }
+            }
+
+            // 5. Send Email Notification to Client
+            if (booking.client?.email) {
+                const emailSubject = `Booking Confirmed: ${new Date(booking.date).toLocaleString()}`;
+                const emailBody = `
+                    <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 8px;">
+                        <h2>Your Appointment is Confirmed!</h2>
+                        <p>Hi ${booking.client.name},</p>
+                        <p>Your booking has been scheduled for:</p>
+                        <p style="font-size: 18px; font-weight: bold; color: #333;">
+                            ${new Date(booking.date).toLocaleString()}
+                        </p>
+                        ${purpose ? `<p><strong>Purpose:</strong> ${purpose}</p>` : ''}
+                        ${meetingLink ? `
+                            <p style="margin-top: 20px;">
+                                <a href="${meetingLink}" style="display: inline-block; padding: 12px 24px; background-color: #4285f4; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">
+                                    Join Meeting
+                                </a>
+                            </p>
+                            <p style="font-size: 12px; color: #666;">Link: ${meetingLink}</p>
+                        ` : ''}
+                        <p style="margin-top: 30px; font-size: 12px; color: #999;">
+                            This is an automated message from ScriptishRx.
+                        </p>
+                    </div>
+                `;
+                try {
+                    await notificationService.sendEmail(booking.client.email, emailSubject, emailBody);
+                    console.log(`📧 Booking confirmation sent to ${booking.client.email}`);
+                } catch (emailError) {
+                    console.error('Failed to send booking email:', emailError.message);
+                }
+            }
+
             res.status(201).json({
                 success: true,
-                booking,
+                booking: { ...booking, meetingLink },
                 message: 'Booking created successfully'
             });
         } catch (error) {

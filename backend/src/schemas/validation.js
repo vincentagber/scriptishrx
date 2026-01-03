@@ -45,12 +45,14 @@ const createBookingSchema = z.object({
     date: z.string().datetime(), // ISO 8601
     purpose: z.string().optional(),
     status: z.enum(StatusEnum).optional().default('Scheduled'),
+    meetingLink: z.string().optional(),
 });
 
 const updateBookingSchema = z.object({
     date: z.string().datetime().optional(),
     status: z.enum(StatusEnum).optional(),
     purpose: z.string().optional(),
+    meetingLink: z.string().optional(),
 });
 
 // Client Schemas

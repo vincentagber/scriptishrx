@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, Calendar as CalendarIcon, Clock, Trash2, Edit2, Check, AlertCircle, X, Search } from 'lucide-react';
+import { Plus, Calendar as CalendarIcon, Clock, Trash2, Edit2, Check, AlertCircle, X, Search, Video, ExternalLink } from 'lucide-react';
 import EmptyState from '@/components/EmptyState';
 
 // Toast Component
@@ -27,7 +27,7 @@ export default function BookingsPage() {
     const [bookings, setBookings] = useState<any[]>([]);
     const [clients, setClients] = useState<any[]>([]);
     const [showAddModal, setShowAddModal] = useState(false);
-    const [newBooking, setNewBooking] = useState({ clientId: '', date: '', time: '', purpose: '' });
+    const [newBooking, setNewBooking] = useState({ clientId: '', date: '', time: '', purpose: '', meetingLink: '' });
 
     // Toast State
     const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
@@ -37,7 +37,7 @@ export default function BookingsPage() {
     // Edit State
     const [showEditModal, setShowEditModal] = useState(false);
     const [editBooking, setEditBooking] = useState<any>(null);
-    const [editForm, setEditForm] = useState({ date: '', time: '', purpose: '', status: '' });
+    const [editForm, setEditForm] = useState({ date: '', time: '', purpose: '', status: '', meetingLink: '' });
 
     const fetchBookings = async () => {
         try {
@@ -104,13 +104,14 @@ export default function BookingsPage() {
                 body: JSON.stringify({
                     clientId: newBooking.clientId,
                     date: dateTime.toISOString(),
-                    purpose: newBooking.purpose
+                    purpose: newBooking.purpose,
+                    meetingLink: newBooking.meetingLink || undefined
                 })
             });
 
             if (res.ok) {
                 setShowAddModal(false);
-                setNewBooking({ clientId: '', date: '', time: '', purpose: '' });
+                setNewBooking({ clientId: '', date: '', time: '', purpose: '', meetingLink: '' });
                 fetchBookings();
                 showToast('Booking created successfully!', 'success');
             } else {
@@ -150,7 +151,8 @@ export default function BookingsPage() {
             date: dateObj.toISOString().split('T')[0],
             time: dateObj.toTimeString().slice(0, 5),
             purpose: booking.purpose || '',
-            status: booking.status
+            status: booking.status,
+            meetingLink: booking.meetingLink || ''
         });
         setShowEditModal(true);
     };
@@ -170,7 +172,8 @@ export default function BookingsPage() {
                 body: JSON.stringify({
                     date: dateTime.toISOString(),
                     purpose: editForm.purpose,
-                    status: editForm.status
+                    status: editForm.status,
+                    meetingLink: editForm.meetingLink || undefined
                 })
             });
 
@@ -245,9 +248,22 @@ export default function BookingsPage() {
                             <h3 className="font-bold text-lg mb-1">{booking.client?.name || 'Unknown Client'}</h3>
                             <p className="text-gray-500 text-sm mb-4">{booking.purpose}</p>
 
-                            <div className="flex items-center text-sm text-gray-500 pt-4 border-t border-gray-50">
-                                <Clock className="w-4 h-4 mr-2" />
-                                {new Date(booking.date).toLocaleString()}
+                            <div className="flex items-center justify-between text-sm text-gray-500 pt-4 border-t border-gray-50">
+                                <div className="flex items-center">
+                                    <Clock className="w-4 h-4 mr-2" />
+                                    {new Date(booking.date).toLocaleString()}
+                                </div>
+                                {booking.meetingLink && (
+                                    <a
+                                        href={booking.meetingLink}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center gap-1 px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-xs font-bold hover:bg-blue-100 transition-colors"
+                                    >
+                                        <Video className="w-3.5 h-3.5" />
+                                        Join
+                                    </a>
+                                )}
                             </div>
                         </div>
                     ))}
@@ -286,10 +302,17 @@ export default function BookingsPage() {
                             </div>
                             <input
                                 type="text"
-                                placeholder="Purpose"
+                                placeholder="Purpose (e.g., Consultation)"
                                 className="w-full p-3 bg-gray-50 rounded-xl outline-none focus:ring-2 focus:ring-black/5"
                                 value={newBooking.purpose}
                                 onChange={e => setNewBooking({ ...newBooking, purpose: e.target.value })}
+                            />
+                            <input
+                                type="url"
+                                placeholder="Meeting Link (optional - auto-generates with Google Calendar)"
+                                className="w-full p-3 bg-gray-50 rounded-xl outline-none focus:ring-2 focus:ring-black/5"
+                                value={newBooking.meetingLink}
+                                onChange={e => setNewBooking({ ...newBooking, meetingLink: e.target.value })}
                             />
                             <div className="flex justify-end gap-2">
                                 <button
@@ -349,6 +372,13 @@ export default function BookingsPage() {
                                 <option value="Completed">Completed</option>
                                 <option value="Cancelled">Cancelled</option>
                             </select>
+                            <input
+                                type="url"
+                                placeholder="Meeting Link (e.g., Google Meet, Zoom)"
+                                className="w-full p-3 bg-gray-50 rounded-xl outline-none focus:ring-2 focus:ring-black/5"
+                                value={editForm.meetingLink}
+                                onChange={e => setEditForm({ ...editForm, meetingLink: e.target.value })}
+                            />
                             <div className="flex justify-end gap-2">
                                 <button
                                     onClick={() => setShowEditModal(false)}
